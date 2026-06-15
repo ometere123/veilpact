@@ -53,7 +53,7 @@ export default function PrivacyLedgerPage() {
       <div>
         <h1 className="font-heading text-3xl text-parchment tracking-widest">PRIVACY LEDGER</h1>
         <p className="text-sm text-muted-parchment mt-1">
-          On-chain record of every selective reveal — what was exposed, why, and the payment decision.
+          On-chain record of every selective reveal: what was exposed, why, and the payment decision.
         </p>
       </div>
 
@@ -120,7 +120,7 @@ export default function PrivacyLedgerPage() {
       {!loaded && !loading && (
         <DossierCard>
           <p className="text-muted-parchment text-sm">
-            A complete record of every selective reveal — verified against the agreement root on-chain.
+            A complete record of every selective reveal, verified against the agreement root on-chain.
             Hidden clause content is never exposed here.
           </p>
         </DossierCard>

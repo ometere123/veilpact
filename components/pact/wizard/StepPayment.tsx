@@ -125,7 +125,7 @@ export function StepPayment({ wizard }: Props) {
               onChange={e => updatePayment({ expectedAmount: e.target.value || "0" })}
             />
             <p style={{ fontSize: "0.7rem", color: "rgba(239,228,208,0.3)", fontFamily: "IBM Plex Mono, monospace" }}>
-              Integer base units only — no decimals. 1 GEN = 10^18 units.
+              Integer base units only, no decimals. 1 GEN = 10^18 units.
             </p>
           </div>
 

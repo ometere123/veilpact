@@ -26,7 +26,7 @@ export function StepFund({ wizard, address, onChainPactId }: Props) {
     .replace(/(\.\d*?)0+$/, "$1");
 
   async function handleFund() {
-    if (!onChainPactId) { setTxError("No on-chain pact ID — submit the pact first."); return; }
+    if (!onChainPactId) { setTxError("No on-chain pact ID. Submit the pact first."); return; }
     setTxState("signing");
     setTxError(null);
     try {
@@ -112,7 +112,7 @@ export function StepFund({ wizard, address, onChainPactId }: Props) {
       {txState === "awaiting" && (
         <div style={{ border: "1px solid rgba(201,163,91,0.3)", backgroundColor: "rgba(201,163,91,0.05)", borderRadius: 2, padding: 12 }}>
           <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.7rem", color: "#C9A35B" }}>
-            AWAITING FINALITY — GenLayer consensus in progress…
+            AWAITING FINALITY - GenLayer consensus in progress…
           </p>
           {txHash && (
             <a href={`${EXPLORER_URL}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
@@ -151,7 +151,7 @@ export function StepFund({ wizard, address, onChainPactId }: Props) {
       <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8 }}>
         {txState !== "done" ? (
           <>
-            <SealButton variant="ghost" onClick={() => window.location.href = "/overview"}>Skip — Fund Later</SealButton>
+            <SealButton variant="ghost" onClick={() => window.location.href = "/overview"}>Skip, Fund Later</SealButton>
             <SealButton variant="gold" disabled={!canFund} loading={txState === "signing" || txState === "awaiting"} onClick={handleFund}>
               {txState === "awaiting" ? "Awaiting Finality…" : `Fund ${payment.expectedAmount} base units`}
             </SealButton>

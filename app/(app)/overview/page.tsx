@@ -44,7 +44,7 @@ export default function OverviewPage() {
   const disputed     = pacts.filter(p => ["DISPUTED","UNDER_REVIEW"].includes(p.status)).length;
   const totalClauses = pacts.reduce((s, p) => s + (p.clauseCount ?? 0), 0);
 
-  // Payment stats from local storage (indicative — authoritative source is the contract)
+  // Payment stats from local storage (indicative - authoritative source is the contract)
   const funded   = pacts.filter(p => p.payment?.enabled && BigInt(p.payment.expectedAmount || "0") > BigInt(0)).length;
 
   return (
@@ -73,9 +73,9 @@ export default function OverviewPage() {
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
           <StatCard label="Funded Pacts"    value={funded}   color="#C9A35B" sub="with payment enabled" />
-          <StatCard label="Locked GEN"      value="—"        color="#7D5FFF" sub="query chain for live data" />
-          <StatCard label="Claimable GEN"   value="—"        color="#6E9F7E" sub="query chain for live data" />
-          <StatCard label="Open Settlements" value="—"       color="#B85C70" sub="query chain for live data" />
+          <StatCard label="Locked GEN"      value="-"        color="#7D5FFF" sub="query chain for live data" />
+          <StatCard label="Claimable GEN"   value="-"        color="#6E9F7E" sub="query chain for live data" />
+          <StatCard label="Open Settlements" value="-"       color="#B85C70" sub="query chain for live data" />
         </div>
       </div>
 

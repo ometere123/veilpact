@@ -11,7 +11,7 @@ const ACTION_CONFIG: Record<string, { label: string; color: string; icon: typeof
   DISMISS:              { label: "Dismiss",               color: "text-muted-parchment border-bone-border",  icon: XCircle },
   REQUEST_MORE_EVIDENCE:{ label: "More Evidence Needed",  color: "text-sealed-gold border-sealed-gold",      icon: AlertCircle },
   REQUEST_NARROW_REVEAL:{ label: "Narrow Reveal Needed",  color: "text-signal-violet border-signal-violet",  icon: MessageSquareDiff },
-  REJECTED_UNSAFE:      { label: "Rejected — Unsafe",     color: "text-redaction-rose border-redaction-rose",icon: XCircle },
+  REJECTED_UNSAFE:      { label: "Rejected: Unsafe",      color: "text-redaction-rose border-redaction-rose",icon: XCircle },
 };
 
 const PAYMENT_DECISION_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {

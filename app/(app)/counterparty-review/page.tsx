@@ -136,7 +136,7 @@ function CounterpartyReviewInner() {
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
           <ShieldCheck size={13} style={{ color: "#C9A35B" }} />
           <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.65rem", color: "#C9A35B" }}>
-            DECRYPTED LOCALLY — KEY NEVER SENT TO ANY SERVER
+            DECRYPTED LOCALLY - KEY NEVER SENT TO ANY SERVER
           </p>
         </div>
         <p style={{ fontSize: "0.75rem", color: "rgba(239,228,208,0.55)", lineHeight: 1.5 }}>
@@ -174,9 +174,9 @@ function CounterpartyReviewInner() {
               <div><p style={lbl}>Party A (Creator)</p><p style={val}>{pkg.draft.partyA}</p></div>
               <div><p style={lbl}>Party B (You)</p><p style={val}>{pkg.draft.partyB}</p></div>
               <div><p style={lbl}>Category</p><p style={val}>{pkg.draft.category}</p></div>
-              <div><p style={lbl}>Jurisdiction</p><p style={val}>{pkg.draft.jurisdiction || "—"}</p></div>
-              <div><p style={lbl}>Duration</p><p style={val}>{pkg.draft.duration || "—"}</p></div>
-              <div><p style={lbl}>On-chain Pact ID</p><p style={val}>{onChainId ?? "—"}</p></div>
+              <div><p style={lbl}>Jurisdiction</p><p style={val}>{pkg.draft.jurisdiction || "-"}</p></div>
+              <div><p style={lbl}>Duration</p><p style={val}>{pkg.draft.duration || "-"}</p></div>
+              <div><p style={lbl}>On-chain Pact ID</p><p style={val}>{onChainId ?? "-"}</p></div>
             </div>
             {pkg.draft.description && (
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(239,228,208,0.1)" }}>

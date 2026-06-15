@@ -74,7 +74,7 @@ export default function GenLayerReviewPage() {
         <>
           <DossierCard>
             <div style={{ marginBottom: 12 }}>
-              <p className="text-xs font-mono text-muted-parchment uppercase tracking-widest mb-1">Dispute #{dispute.disputeId} — Pact #{dispute.pactId}</p>
+              <p className="text-xs font-mono text-muted-parchment uppercase tracking-widest mb-1">Dispute #{dispute.disputeId} - Pact #{dispute.pactId}</p>
               <p className="text-sm text-parchment">{dispute.claim}</p>
               <p className="text-xs text-muted-parchment mt-1">Clause #{dispute.clauseIndex} · Status: {dispute.status}</p>
             </div>
@@ -101,7 +101,7 @@ export default function GenLayerReviewPage() {
             </>
           ) : (
             <DossierCard>
-              <p className="text-muted-parchment text-sm">Verdict pending — GenLayer validators are reviewing the revealed clause.</p>
+              <p className="text-muted-parchment text-sm">Verdict pending. GenLayer validators are reviewing the revealed clause.</p>
             </DossierCard>
           )}
         </>

@@ -95,7 +95,7 @@ export function SettlementDecisionCard({ verdict, pact, pactId, disputeId, addre
         <div style={{ display: "flex", gap: 8, border: "1px solid rgba(184,92,112,0.3)", backgroundColor: "rgba(184,92,112,0.05)", borderRadius: 2, padding: 10 }}>
           <AlertTriangle size={14} style={{ color: "#B85C70", flexShrink: 0 }} />
           <p style={{ fontSize: "0.78rem", color: "#B85C70", lineHeight: 1.5 }}>
-            Unsafe pact rejected — payer refund applied.
+            Unsafe pact rejected. Payer refund applied.
           </p>
         </div>
       )}
@@ -126,7 +126,7 @@ export function SettlementDecisionCard({ verdict, pact, pactId, disputeId, addre
           <CheckCircle size={14} style={{ color: "#6E9F7E", flexShrink: 0 }} />
           <a href={`${EXPLORER_URL}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
             style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.65rem", color: "#6E9F7E", textDecoration: "underline", wordBreak: "break-all" }}>
-            Settlement applied — {txHash} ↗
+            Settlement applied: {txHash} ↗
           </a>
         </div>
       )}
@@ -139,7 +139,7 @@ export function SettlementDecisionCard({ verdict, pact, pactId, disputeId, addre
 
       {pact.settlementApplied && !applied && (
         <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.7rem", color: "#6E9F7E" }}>
-          ✓ Settlement already applied — parties can now claim.
+          ✓ Settlement already applied. Parties can now claim.
         </p>
       )}
     </div>

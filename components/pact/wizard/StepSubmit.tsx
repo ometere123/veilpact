@@ -174,14 +174,14 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
             {showKey && keyHex && <p style={{ ...val, color: "#B85C70", marginTop: 4 }}>{keyHex}</p>}
           </div>
           <div><p style={lbl}>Root Salt</p><p style={{ ...val, color: "rgba(239,228,208,0.35)", fontStyle: "italic" }}>Stored in .veilpact backup</p></div>
-          <div><p style={lbl}>Clause Salts</p><p style={{ ...val, color: "rgba(239,228,208,0.35)", fontStyle: "italic" }}>{draft.clauses.length} salts — encrypted</p></div>
+          <div><p style={lbl}>Clause Salts</p><p style={{ ...val, color: "rgba(239,228,208,0.35)", fontStyle: "italic" }}>{draft.clauses.length} salts, encrypted</p></div>
           <div><p style={lbl}>Canonical Payloads</p><p style={{ ...val, color: "rgba(239,228,208,0.35)", fontStyle: "italic" }}>In .veilpact file for selective reveal</p></div>
         </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.65rem", color: "rgba(239,228,208,0.3)" }}>
-          Contract: {CONTRACT_ADDRESS || "(not set — deploy first)"}
+          Contract: {CONTRACT_ADDRESS || "(not set: deploy first)"}
         </p>
         {CONTRACT_ADDRESS && (
           <a href={`${EXPLORER_URL}/address/${CONTRACT_ADDRESS}`} target="_blank" rel="noopener noreferrer" style={{ color: "rgba(239,228,208,0.3)" }}>
@@ -193,7 +193,7 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
       {txState === "awaiting" && (
         <div style={{ border: "1px solid rgba(201,163,91,0.3)", backgroundColor: "rgba(201,163,91,0.05)", borderRadius: 2, padding: 12 }}>
           <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.7rem", color: "#C9A35B" }}>
-            AWAITING FINALITY — GenLayer consensus in progress…
+            AWAITING FINALITY - GenLayer consensus in progress…
           </p>
           {txHash && (
             <a href={`${EXPLORER_URL}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
@@ -231,7 +231,7 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
                 SHARE WITH COUNTERPARTY
               </p>
               <p style={{ fontSize: "0.75rem", color: "rgba(239,228,208,0.55)", marginBottom: 10, lineHeight: 1.5 }}>
-                Send this link to <span style={{ color: "#EFE4D0" }}>{draft.partyB}</span>. The decryption key is embedded in the <code>#fragment</code> — it never reaches any server.
+                Send this link to <span style={{ color: "#EFE4D0" }}>{draft.partyB}</span>. The decryption key is embedded in the <code>#fragment</code>. It never reaches any server.
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.3)", borderRadius: 2, padding: "8px 12px" }}>
                 <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.62rem", color: "#C9A35B", wordBreak: "break-all", flex: 1 }}>

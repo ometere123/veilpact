@@ -140,7 +140,7 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
           <DossierCard><p className="text-xs text-muted-parchment">Clauses</p><p className="font-mono text-sm text-parchment mt-1">{pact.clauseCount}</p></DossierCard>
           <DossierCard><p className="text-xs text-muted-parchment">Revealed</p><p className="font-mono text-sm text-parchment mt-1">{pact.revealedCount ?? 0}</p></DossierCard>
           <DossierCard><p className="text-xs text-muted-parchment">Disputes</p><p className="font-mono text-sm text-parchment mt-1">{pact.disputeCount ?? 0}</p></DossierCard>
-          <DossierCard><p className="text-xs text-muted-parchment">Created</p><p className="font-mono text-sm text-parchment mt-1">{pact.createdAt ? new Date(pact.createdAt * 1000).toLocaleDateString() : "—"}</p></DossierCard>
+          <DossierCard><p className="text-xs text-muted-parchment">Created</p><p className="font-mono text-sm text-parchment mt-1">{pact.createdAt ? new Date(pact.createdAt * 1000).toLocaleDateString() : "-"}</p></DossierCard>
           <div className="col-span-2">
             <DossierCard>
               <p className="text-xs text-muted-parchment mb-1">Root Salt</p>
@@ -171,7 +171,7 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
         <div className="space-y-3">
           {Array.from({ length: pact.clauseCount ?? 0 }).map((_, i) => (
             <DossierCard key={i}>
-              <p className="text-xs text-muted-parchment font-mono">CLAUSE #{i} — commitment stored on-chain</p>
+              <p className="text-xs text-muted-parchment font-mono">CLAUSE #{i} - commitment stored on-chain</p>
               <p className="text-xs text-muted-parchment/50 font-mono mt-1 break-all">
                 {pact.clauseCommitments?.[i] ?? "(no commitment data)"}
               </p>
@@ -239,7 +239,7 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
               <TimelineEvent type="PAYMENT_LOCKED" label="PAYMENT_LOCKED" description="GEN locked in contract" />
             )}
             {disputes.map(d => (
-              <TimelineEvent key={d.disputeId} type="DISPUTE_OPENED" label="DISPUTE_OPENED" description={`Dispute #${d.disputeId} — clause ${d.clauseIndex}`} timestamp={d.createdAt} />
+              <TimelineEvent key={d.disputeId} type="DISPUTE_OPENED" label="DISPUTE_OPENED" description={`Dispute #${d.disputeId} - clause ${d.clauseIndex}`} timestamp={d.createdAt} />
             ))}
             {latestVerdict && (
               <TimelineEvent type="GENLAYER_REVIEW_COMPLETE" label="GENLAYER_REVIEW_COMPLETE" description={`Verdict: ${latestVerdict.recommendedAction} / ${latestVerdict.paymentDecision}`} />
