@@ -1,55 +1,70 @@
-
 "use client";
 
 import { WalletStatusPill } from "@/components/ui/WalletStatusPill";
 import { NetworkBadge } from "@/components/ui/NetworkBadge";
+import { SealButton } from "@/components/ui/SealButton";
 import { Lock, AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useWalletContext } from "@/contexts/WalletContext";
 
 interface TopBarProps {
-  address?: string;
-  connected?: boolean;
   activePacts?: number;
   openDisputes?: number;
   revealMode?: "locked" | "selective" | "open";
 }
 
-const REVEAL_MODE_CONFIG = {
-  locked:    { label: "Locked",    color: "text-verdict-green" },
-  selective: { label: "Selective", color: "text-sealed-gold" },
-  open:      { label: "Open",      color: "text-redaction-rose" },
+const REVEAL_MODE: Record<string, { label: string; color: string }> = {
+  locked:    { label: "Locked",    color: "#6E9F7E" },
+  selective: { label: "Selective", color: "#C9A35B" },
+  open:      { label: "Open",      color: "#B85C70" },
 };
 
-export function TopBar({
-  address,
-  connected = false,
-  activePacts = 0,
-  openDisputes = 0,
-  revealMode = "locked",
-}: TopBarProps) {
-  const rm = REVEAL_MODE_CONFIG[revealMode];
+export function TopBar({ activePacts = 0, openDisputes = 0, revealMode = "locked" }: TopBarProps) {
+  const { address, connected, connecting, connect } = useWalletContext();
+  const rm = REVEAL_MODE[revealMode];
 
   return (
-    <header className="fixed top-0 left-56 right-0 h-14 bg-obsidian border-b border-bone-border flex items-center px-6 gap-4 z-30">
-      <WalletStatusPill address={address} connected={connected} />
+    <header
+      className="fixed top-0 flex items-center px-6 gap-4 z-30"
+      style={{
+        left: 224,
+        right: 0,
+        height: 56,
+        backgroundColor: "#14141C",
+        borderBottom: "1px solid rgba(239,228,208,0.18)",
+      }}
+    >
+      {connected ? (
+        <WalletStatusPill address={address ?? undefined} connected={connected} />
+      ) : (
+        <SealButton size="sm" variant="outline" loading={connecting} onClick={connect}>
+          Connect Wallet
+        </SealButton>
+      )}
+
       <NetworkBadge />
 
-      <div className="flex items-center gap-1.5 text-xs text-muted-parchment border border-bone-border px-2.5 py-1 rounded-sm">
-        <span>Active pacts</span>
-        <span className="text-parchment font-mono">{activePacts}</span>
+      <div
+        className="flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-sm"
+        style={{ border: "1px solid rgba(239,228,208,0.18)", color: "rgba(239,228,208,0.64)" }}
+      >
+        <span>Pacts</span>
+        <span style={{ color: "#EFE4D0" }}>{activePacts}</span>
       </div>
 
       {openDisputes > 0 && (
-        <div className="flex items-center gap-1.5 text-xs text-redaction-rose border border-redaction-rose/30 bg-redaction-rose/5 px-2.5 py-1 rounded-sm">
+        <div
+          className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-sm"
+          style={{ border: "1px solid rgba(184,92,112,0.3)", color: "#B85C70", backgroundColor: "rgba(184,92,112,0.05)" }}
+        >
           <AlertTriangle className="w-3 h-3" />
-          <span>{openDisputes} dispute{openDisputes !== 1 ? "s" : ""}</span>
+          {openDisputes} dispute{openDisputes !== 1 ? "s" : ""}
         </div>
       )}
 
       <div className="ml-auto flex items-center gap-1.5 text-xs">
-        <Lock className={cn("w-3 h-3", rm.color)} />
-        <span className="text-muted-parchment">Reveal mode:</span>
-        <span className={cn("font-mono", rm.color)}>{rm.label}</span>
+        <Lock className="w-3 h-3" style={{ color: rm.color }} />
+        <span style={{ color: "rgba(239,228,208,0.64)" }}>Reveal:</span>
+        <span className="font-mono" style={{ color: rm.color }}>{rm.label}</span>
       </div>
     </header>
   );

@@ -1,0 +1,23 @@
+<svg width="200" height="200" viewBox="0 0 200 200" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>VeilPact</title>
+  <desc>Hexagonal wax seal with a stylised V mark representing VeilPact</desc>
+  <!-- Hex shadow -->
+  <g transform="translate(100,100)">
+    <polygon points="0,-82 71,-41 71,41 0,82 -71,41 -71,-41" fill="#7A5E20" opacity="0.35"/>
+    <!-- Main hex -->
+    <polygon points="0,-78 67.6,-39 67.6,39 0,78 -67.6,39 -67.6,-39" fill="#C9A35B"/>
+    <!-- Inner ring -->
+    <polygon points="0,-65 56.3,-32.5 56.3,32.5 0,65 -56.3,32.5 -56.3,-32.5" fill="none" stroke="#A07A30" stroke-width="1.5"/>
+    <!-- Inner fill -->
+    <polygon points="0,-56 48.5,-28 48.5,28 0,56 -48.5,28 -48.5,-28" fill="#B8892A"/>
+    <!-- V left arm -->
+    <line x1="-22" y1="-24" x2="0" y2="22" stroke="#0B0B10" stroke-width="10" stroke-linecap="round"/>
+    <!-- V right arm -->
+    <line x1="22" y1="-24" x2="0" y2="22" stroke="#0B0B10" stroke-width="10" stroke-linecap="round"/>
+    <!-- Veil drape arc -->
+    <path d="M-28,-24 Q-10,-8 0,-2 Q10,-8 28,-24" fill="none" stroke="#0B0B10" stroke-width="4" stroke-linecap="round"/>
+    <!-- Tip dots -->
+    <circle cx="-22" cy="-24" r="5" fill="#0B0B10"/>
+    <circle cx="22" cy="-24" r="5" fill="#0B0B10"/>
+  </g>
+</svg>

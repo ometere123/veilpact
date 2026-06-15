@@ -3,30 +3,46 @@ import { type ReactNode } from "react";
 
 type EventType =
   | "PACT_CREATED"
+  | "PACT_FUNDED"
   | "COUNTERPARTY_ACCEPTED"
+  | "PAYMENT_LOCKED"
+  | "PAYMENT_RELEASED"
+  | "PAYMENT_CLAIMABLE"
+  | "PAYER_REFUND_CLAIMED"
+  | "PAYEE_PAYMENT_CLAIMED"
   | "DISPUTE_OPENED"
   | "CLAUSE_REVEALED"
+  | "GENLAYER_REVIEW_COMPLETE"
   | "GENLAYER_REVIEW"
+  | "SETTLEMENT_APPLIED"
   | "VERDICT"
   | "PACT_CLOSED";
 
 const EVENT_COLORS: Record<EventType, string> = {
-  PACT_CREATED:          "bg-clause-blue",
-  COUNTERPARTY_ACCEPTED: "bg-verdict-green",
-  DISPUTE_OPENED:        "bg-redaction-rose",
-  CLAUSE_REVEALED:       "bg-sealed-gold",
-  GENLAYER_REVIEW:       "bg-signal-violet",
-  VERDICT:               "bg-verdict-green",
-  PACT_CLOSED:           "bg-muted-parchment",
+  PACT_CREATED:            "bg-clause-blue",
+  PACT_FUNDED:             "bg-sealed-gold",
+  COUNTERPARTY_ACCEPTED:   "bg-verdict-green",
+  PAYMENT_LOCKED:          "bg-signal-violet",
+  PAYMENT_RELEASED:        "bg-verdict-green",
+  PAYMENT_CLAIMABLE:       "bg-verdict-green",
+  PAYER_REFUND_CLAIMED:    "bg-sealed-gold",
+  PAYEE_PAYMENT_CLAIMED:   "bg-verdict-green",
+  DISPUTE_OPENED:          "bg-redaction-rose",
+  CLAUSE_REVEALED:         "bg-sealed-gold",
+  GENLAYER_REVIEW_COMPLETE:"bg-signal-violet",
+  GENLAYER_REVIEW:         "bg-signal-violet",
+  SETTLEMENT_APPLIED:      "bg-signal-violet",
+  VERDICT:                 "bg-verdict-green",
+  PACT_CLOSED:             "bg-muted-parchment",
 };
 
 interface TimelineEventProps {
-  type: EventType | string;
-  label: string;
-  timestamp?: string | number;
+  type:         EventType | string;
+  label:        string;
+  timestamp?:   string | number;
   description?: string;
-  last?: boolean;
-  children?: ReactNode;
+  last?:        boolean;
+  children?:    ReactNode;
 }
 
 export function TimelineEvent({ type, label, timestamp, description, last, children }: TimelineEventProps) {
