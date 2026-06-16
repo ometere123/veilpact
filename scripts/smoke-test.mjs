@@ -16,11 +16,16 @@ import { TransactionStatus } from "genlayer-js/types";
 import { createHash } from "node:crypto";
 
 // ── Config ─────────────────────────────────────────────────────────────────────
-const CONTRACT = process.env.VEILPACT_CONTRACT_ADDRESS
-  ?? "0xfd03E67f14c3dA72fBD7835D3e99552a66b7d16A";
-const PK1 = "0x877603b564a9b320b62d4f0c6a6784e293d6e6f123f01bdae4c1cf13ca6e8cbf";
-const PK2 = "0x54464e96a83a2db45e60b66d6f115770c994f08c9cf68fbccdf883b033409ee1";
+const CONTRACT = process.env.VEILPACT_CONTRACT_ADDRESS;
+const PK1 = process.env.VEILPACT_PK1;
+const PK2 = process.env.VEILPACT_PK2;
 const NETWORK = "studionet";
+const missing = [
+  ["VEILPACT_CONTRACT_ADDRESS", CONTRACT],
+  ["VEILPACT_PK1", PK1],
+  ["VEILPACT_PK2", PK2],
+].filter(([, value]) => !value).map(([name]) => name);
+if (missing.length) throw new Error(`Missing env vars: ${missing.join(", ")}`);
 
 // ── Accounts ───────────────────────────────────────────────────────────────────
 const acct1 = createAccount(PK1);

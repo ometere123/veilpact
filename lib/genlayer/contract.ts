@@ -50,7 +50,11 @@ async function write(
   assertAddress(walletAddress, 'walletAddress');
   console.log('[VeilPact write]', { address: CONTRACT_ADDRESS, functionName, args, value: value.toString() });
 
-  const client = getWriteClient(walletAddress);
+  const client = getWriteClient(walletAddress, {
+    functionName,
+    contractAddress: CONTRACT_ADDRESS,
+    expectedValue: value,
+  });
 
   const txHash = await (client as any).writeContract({
     address: CONTRACT_ADDRESS,

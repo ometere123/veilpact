@@ -7,7 +7,7 @@ import { TransactionStatus } from "genlayer-js/types";
 
 const CONTRACT = "0xFEe7B8D0e25B5bE16cc48350fB09A5657732B641";
 // Admin was set to whoever deployed. Let's check what admin is:
-const PK1 = "0x877603b564a9b320b62d4f0c6a6784e293d6e6f123f01bdae4c1cf13ca6e8cbf";
+const PK1 = process.env.VEILPACT_PK1;
 
 const acct1 = createAccount(PK1);
 const client1 = createClient({ chain: studionet, account: acct1 });

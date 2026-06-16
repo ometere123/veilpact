@@ -97,6 +97,12 @@ export function PaymentActions({ pact, pactId, address, onDone }: Props) {
           >
             {txState[key] === "done" ? "Done" : label}
           </SealButton>
+          {key === "fund" && txState[key] === "idle" && (
+            <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.62rem", color: "rgba(239,228,208,0.38)", marginTop: 6, lineHeight: 1.5 }}>
+              Guarded before signing: wallet value must equal {formatGEN(pact.expectedAmount)} GEN
+              ({String(pact.expectedAmount ?? BigInt(0))} wei), or VeilPact aborts.
+            </p>
+          )}
           {txState[key] === "done" && txHash[key] && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
               <CheckCircle size={12} style={{ color: "#6E9F7E" }} />

@@ -6,8 +6,8 @@ import { studionet } from "genlayer-js/chains";
 import { createHash } from "node:crypto";
 
 const CONTRACT = "0xFEe7B8D0e25B5bE16cc48350fB09A5657732B641";
-const PK1 = "0x877603b564a9b320b62d4f0c6a6784e293d6e6f123f01bdae4c1cf13ca6e8cbf";
-const PK2 = "0x54464e96a83a2db45e60b66d6f115770c994f08c9cf68fbccdf883b033409ee1";
+const PK1 = process.env.VEILPACT_PK1;
+const PK2 = process.env.VEILPACT_PK2;
 
 const acct1 = createAccount(PK1);
 const acct2 = createAccount(PK2);

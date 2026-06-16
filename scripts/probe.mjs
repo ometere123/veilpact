@@ -7,7 +7,7 @@ import { createClient, createAccount } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
 
 const CONTRACT = "0xFEe7B8D0e25B5bE16cc48350fB09A5657732B641";
-const PK1 = "0x877603b564a9b320b62d4f0c6a6784e293d6e6f123f01bdae4c1cf13ca6e8cbf";
+const PK1 = process.env.VEILPACT_PK1;
 
 const acct1  = createAccount(PK1);
 const client = createClient({ chain: studionet, account: acct1 });

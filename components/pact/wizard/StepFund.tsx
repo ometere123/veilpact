@@ -93,14 +93,13 @@ export function StepFund({ wizard, address, onChainPactId }: Props) {
           GEN stays locked until both parties agree to release or a settlement is applied.
         </p>
       </div>
-
-      {/* Wallet display warning */}
-      <div style={{ border: "1px solid rgba(184,92,112,0.25)", backgroundColor: "rgba(184,92,112,0.04)", borderRadius: 2, padding: 12 }}>
-        <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.65rem", color: "#B85C70", marginBottom: 4 }}>WALLET DISPLAY WARNING</p>
+      {/* Wallet transaction guard */}
+      <div style={{ border: "1px solid rgba(110,159,126,0.3)", backgroundColor: "rgba(110,159,126,0.05)", borderRadius: 2, padding: 12 }}>
+        <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.65rem", color: "#6E9F7E", marginBottom: 4 }}>WALLET VALUE GUARD</p>
         <p style={{ fontSize: "0.78rem", color: "rgba(239,228,208,0.6)", lineHeight: 1.6 }}>
-          Rabby and MetaMask cannot decode GenLayer contract calls on custom networks.
-          Your wallet popup will show a <strong style={{ color: "#EFE4D0" }}>wrong token amount</strong> — ignore it.
-          The actual amount sent to the contract is always:
+          Before the wallet popup opens, VeilPact checks the raw transaction payload from GenLayer.
+          If the native value is not exactly <strong style={{ color: "#EFE4D0" }}>{amountGen} GEN</strong>,
+          the app aborts the transaction before you can sign.
         </p>
         <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "1rem", color: "#C9A35B", marginTop: 8, textAlign: "center", letterSpacing: "0.05em" }}>
           {amountGen} GEN
