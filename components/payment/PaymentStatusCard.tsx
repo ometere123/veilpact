@@ -3,6 +3,7 @@
 import { PAYMENT_STATUS_LABEL } from "@/lib/constants";
 import type { PactOnChain } from "@/lib/schemas/pact";
 import { Coins, Lock, CheckCircle, AlertCircle, ArrowDownLeft, ArrowUpRight, Split } from "lucide-react";
+import { formatGEN } from "@/lib/utils/format-gen";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   NONE:      Coins,
@@ -37,12 +38,9 @@ interface Props {
   connectedAddress?: string;
 }
 
-function genLabel(amount: bigint): string {
-  if (amount === BigInt(0)) return "0";
-  const whole = amount / BigInt("1000000000000000000");
-  const frac  = amount % BigInt("1000000000000000000");
-  if (frac === BigInt(0)) return `${whole} GEN`;
-  return `${whole}.${frac.toString().padStart(18, "0").replace(/0+$/, "")} GEN`;
+function genLabel(amount: bigint | number | string | undefined): string {
+  const formatted = formatGEN(amount);
+  return formatted === "0" ? "0" : `${formatted} GEN`;
 }
 
 export function PaymentStatusCard({ pact, connectedAddress }: Props) {

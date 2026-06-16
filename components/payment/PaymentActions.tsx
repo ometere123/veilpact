@@ -6,6 +6,7 @@ import { veilpactWrite } from "@/lib/genlayer/contract";
 import type { PactOnChain } from "@/lib/schemas/pact";
 import { EXPLORER_URL } from "@/lib/constants";
 import { CheckCircle, AlertTriangle } from "lucide-react";
+import { formatGEN } from "@/lib/utils/format-gen";
 
 interface Props {
   pact:     PactOnChain;
@@ -53,7 +54,7 @@ export function PaymentActions({ pact, pactId, address, onDone }: Props) {
   }> = [
     {
       key:   "fund",
-      label: `Fund Pact (${pact.expectedAmount ? (() => { const w = BigInt(pact.expectedAmount); const g = w / BigInt("1000000000000000000"); const f = w % BigInt("1000000000000000000"); return f === BigInt(0) ? `${g}` : `${g}.${f.toString().padStart(18,"0").replace(/0+$/,"")}`; })() : "0"} GEN)`,
+      label: `Fund Pact (${formatGEN(pact.expectedAmount)} GEN)`,
       show:  isPayer && status === "UNFUNDED",
       fn:    () => veilpactWrite.fundPact(address as `0x${string}`, pactId, pact.expectedAmount ?? BigInt(0)),
       color: "gold",
