@@ -230,7 +230,7 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
           <div className="space-y-0">
             <TimelineEvent type="PACT_CREATED" label="PACT_CREATED" description="Commitment root stored on GenLayer" timestamp={pact.createdAt} />
             {pact.fundedAmount > BigInt(0) && (
-              <TimelineEvent type="PACT_FUNDED" label="PACT_FUNDED" description={`${pact.fundedAmount} base units funded`} />
+              <TimelineEvent type="PACT_FUNDED" label="PACT_FUNDED" description={`${(() => { const w = BigInt(pact.fundedAmount); const g = w / BigInt("1000000000000000000"); const f = w % BigInt("1000000000000000000"); return f === BigInt(0) ? `${g}` : `${g}.${f.toString().padStart(18,"0").replace(/0+$/,"")}`; })()} GEN funded`} />
             )}
             {pact.acceptedAt > 0 && (
               <TimelineEvent type="COUNTERPARTY_ACCEPTED" label="COUNTERPARTY_ACCEPTED" timestamp={pact.acceptedAt} />

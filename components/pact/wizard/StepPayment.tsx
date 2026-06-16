@@ -1,8 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { SealButton } from "@/components/ui/SealButton";
 import type { WizardState } from "@/hooks/usePactWizard";
 import { Coins, AlertTriangle, ArrowRightLeft } from "lucide-react";
+
+function weiToGenDisplay(wei: string): string {
+  if (!wei || wei === "0") return "";
+  try {
+    const n = BigInt(wei);
+    const whole = n / BigInt("1000000000000000000");
+    const frac  = n % BigInt("1000000000000000000");
+    if (frac === BigInt(0)) return whole.toString();
+    return `${whole}.${frac.toString().padStart(18, "0").replace(/0+$/, "")}`;
+  } catch { return ""; }
+}
+
+function genToWei(gen: string): string {
+  if (!gen) return "0";
+  try {
+    const [whole, frac = ""] = gen.split(".");
+    const fracPadded = frac.slice(0, 18).padEnd(18, "0");
+    return (BigInt(whole || "0") * BigInt("1000000000000000000") + BigInt(fracPadded)).toString();
+  } catch { return "0"; }
+}
 
 interface Props { wizard: WizardState; }
 
@@ -22,6 +43,7 @@ const row: React.CSSProperties = {
 
 export function StepPayment({ wizard }: Props) {
   const { payment, updatePayment, draft, nextStep, prevStep } = wizard;
+  const [genInput, setGenInput] = useState(() => weiToGenDisplay(payment.expectedAmount));
 
   function swapRoles() {
     updatePayment({ payer: payment.payee, payee: payment.payer });
@@ -118,28 +140,15 @@ export function StepPayment({ wizard }: Props) {
             <div style={{ position: "relative" }}>
               <input
                 style={{ ...inp, paddingRight: 52 }}
-                type="number"
-                min="0.000000000000000001"
-                step="any"
+                type="text"
+                inputMode="decimal"
                 placeholder="e.g. 20"
-                value={
-                  payment.expectedAmount === "0" || payment.expectedAmount === ""
-                    ? ""
-                    : (() => {
-                        try { return (Number(BigInt(payment.expectedAmount)) / 1e18).toString(); }
-                        catch { return ""; }
-                      })()
-                }
+                value={genInput}
                 onChange={e => {
-                  const gen = e.target.value;
-                  if (!gen) { updatePayment({ expectedAmount: "0" }); return; }
-                  try {
-                    // multiply by 10^18 without float precision loss
-                    const [whole, frac = ""] = gen.split(".");
-                    const fracPadded = frac.slice(0, 18).padEnd(18, "0");
-                    const wei = (BigInt(whole || "0") * BigInt("1000000000000000000") + BigInt(fracPadded)).toString();
-                    updatePayment({ expectedAmount: wei });
-                  } catch { /* invalid input, ignore */ }
+                  const v = e.target.value;
+                  if (v !== "" && !/^\d*\.?\d*$/.test(v)) return;
+                  setGenInput(v);
+                  updatePayment({ expectedAmount: genToWei(v) });
                 }}
               />
               <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontFamily: "IBM Plex Mono, monospace", fontSize: "0.75rem", color: "rgba(239,228,208,0.4)", pointerEvents: "none" }}>GEN</span>

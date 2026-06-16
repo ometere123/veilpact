@@ -70,7 +70,7 @@ export function StepFund({ wizard, address, onChainPactId }: Props) {
           </div>
           <p style={{ fontSize: "0.8rem", color: "rgba(239,228,208,0.64)", lineHeight: 1.6 }}>
             The payer (<span style={{ fontFamily: "IBM Plex Mono, monospace", color: "#EFE4D0" }}>{payment.payer}</span>)
-            must call <code>fund_pact</code> with {payment.expectedAmount} base units before the counterparty can accept.
+            must fund the pact with {amountGen} GEN before the counterparty can accept.
           </p>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -115,7 +115,7 @@ export function StepFund({ wizard, address, onChainPactId }: Props) {
           ["Pact ID", onChainPactId ?? "pending"],
           ["Payer",  payment.payer],
           ["Payee",  payment.payee],
-          ["Amount", `${payment.expectedAmount} base units (${amountGen} GEN)`],
+          ["Amount", `${amountGen} GEN`],
         ].map(([k, v]) => (
           <div key={String(k)}>
             <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.6rem", color: "rgba(239,228,208,0.4)", textTransform: "uppercase", letterSpacing: "0.12em" }}>{k}</p>
@@ -168,7 +168,7 @@ export function StepFund({ wizard, address, onChainPactId }: Props) {
           <>
             <SealButton variant="ghost" onClick={() => window.location.href = "/overview"}>Skip, Fund Later</SealButton>
             <SealButton variant="gold" disabled={!canFund} loading={txState === "signing" || txState === "awaiting"} onClick={handleFund}>
-              {txState === "awaiting" ? "Awaiting Finality…" : `Fund ${payment.expectedAmount} base units`}
+              {txState === "awaiting" ? "Awaiting Finality…" : `Fund ${amountGen} GEN`}
             </SealButton>
           </>
         ) : (

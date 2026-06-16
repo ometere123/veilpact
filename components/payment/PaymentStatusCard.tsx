@@ -39,7 +39,10 @@ interface Props {
 
 function genLabel(amount: bigint): string {
   if (amount === BigInt(0)) return "0";
-  return amount.toString() + " (base units)";
+  const whole = amount / BigInt("1000000000000000000");
+  const frac  = amount % BigInt("1000000000000000000");
+  if (frac === BigInt(0)) return `${whole} GEN`;
+  return `${whole}.${frac.toString().padStart(18, "0").replace(/0+$/, "")} GEN`;
 }
 
 export function PaymentStatusCard({ pact, connectedAddress }: Props) {
