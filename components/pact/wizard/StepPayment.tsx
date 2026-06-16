@@ -114,19 +114,41 @@ export function StepPayment({ wizard }: Props) {
           </div>
 
           <div style={row}>
-            <label style={lbl}>Expected Amount (base units)</label>
-            <input
-              style={inp}
-              type="number"
-              min="1"
-              step="1"
-              placeholder="e.g. 1000000000000000000 = 1 GEN"
-              value={payment.expectedAmount === "0" ? "" : payment.expectedAmount}
-              onChange={e => updatePayment({ expectedAmount: e.target.value || "0" })}
-            />
-            <p style={{ fontSize: "0.7rem", color: "rgba(239,228,208,0.3)", fontFamily: "IBM Plex Mono, monospace" }}>
-              Integer base units only, no decimals. 1 GEN = 10^18 units.
-            </p>
+            <label style={lbl}>Expected Amount (GEN)</label>
+            <div style={{ position: "relative" }}>
+              <input
+                style={{ ...inp, paddingRight: 52 }}
+                type="number"
+                min="0.000000000000000001"
+                step="any"
+                placeholder="e.g. 20"
+                value={
+                  payment.expectedAmount === "0" || payment.expectedAmount === ""
+                    ? ""
+                    : (() => {
+                        try { return (Number(BigInt(payment.expectedAmount)) / 1e18).toString(); }
+                        catch { return ""; }
+                      })()
+                }
+                onChange={e => {
+                  const gen = e.target.value;
+                  if (!gen) { updatePayment({ expectedAmount: "0" }); return; }
+                  try {
+                    // multiply by 10^18 without float precision loss
+                    const [whole, frac = ""] = gen.split(".");
+                    const fracPadded = frac.slice(0, 18).padEnd(18, "0");
+                    const wei = (BigInt(whole || "0") * BigInt("1000000000000000000") + BigInt(fracPadded)).toString();
+                    updatePayment({ expectedAmount: wei });
+                  } catch { /* invalid input, ignore */ }
+                }}
+              />
+              <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontFamily: "IBM Plex Mono, monospace", fontSize: "0.75rem", color: "rgba(239,228,208,0.4)", pointerEvents: "none" }}>GEN</span>
+            </div>
+            {payment.expectedAmount && payment.expectedAmount !== "0" && (
+              <p style={{ fontSize: "0.65rem", color: "rgba(239,228,208,0.25)", fontFamily: "IBM Plex Mono, monospace" }}>
+                = {payment.expectedAmount} wei (sent to contract)
+              </p>
+            )}
           </div>
 
           {payment.payer === payment.payee && payment.payer && (
