@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams }               from "next/navigation";
+import { useRouter, useSearchParams }    from "next/navigation";
 import { useWalletContext }              from "@/contexts/WalletContext";
 import { SealButton }                from "@/components/ui/SealButton";
 import { HashRibbon }                from "@/components/ui/HashRibbon";
-import { fetchSharedPact }           from "@/lib/supabase/shared-pacts";
+import { fetchSharedPact, type SharedPactRow } from "@/lib/supabase/shared-pacts";
 import { importKeyHex, decryptPackage } from "@/lib/crypto/encryption";
 import { veilpactWrite }             from "@/lib/genlayer/contract";
+import { syncPactFromChain }         from "@/lib/genlayer/sync";
+import { getPactByOnChainId, storePact } from "@/lib/storage/indexeddb";
 import { EXPLORER_URL }              from "@/lib/constants";
 import type { PactDraft, ClauseCommitment } from "@/lib/schemas/pact";
-import { CheckCircle, AlertTriangle, ShieldCheck, Coins, ExternalLink } from "lucide-react";
+import { CheckCircle, AlertTriangle, ShieldCheck, Coins } from "lucide-react";
 
 type LoadState = "idle" | "loading" | "ready" | "error";
 type TxState   = "idle" | "awaiting" | "done" | "error";
@@ -33,11 +35,14 @@ function formatGEN(wei: string | bigint): string {
 function CounterpartyReviewInner() {
   const { address, connected, connect } = useWalletContext();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const shareId = searchParams.get("id");
 
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pkg,       setPkg]       = useState<DecryptedPkg | null>(null);
+  const [sharedRow, setSharedRow] = useState<SharedPactRow | null>(null);
+  const [keyHex,    setKeyHex]    = useState("");
   const [onChainId, setOnChainId] = useState<number | null>(null);
   const [paymentEnabled, setPaymentEnabled] = useState(false);
 
@@ -49,10 +54,11 @@ function CounterpartyReviewInner() {
   // The decryption key comes from window.location.hash — it never reaches the server.
   useEffect(() => {
     if (!shareId) return;
-    setLoadState("loading");
+    let alive = true;
 
     async function load() {
       try {
+        setLoadState("loading");
         const keyHex = typeof window !== "undefined"
           ? window.location.hash.replace(/^#/, "")
           : "";
@@ -62,27 +68,62 @@ function CounterpartyReviewInner() {
         const key = await importKeyHex(keyHex);
         const decrypted = await decryptPackage(row.encrypted_pkg, key) as DecryptedPkg;
 
+        if (!alive) return;
         setPkg(decrypted);
+        setSharedRow(row);
+        setKeyHex(keyHex);
         setOnChainId(row.on_chain_id);
         setPaymentEnabled(row.payment_enabled);
         setLoadState("ready");
       } catch (e: unknown) {
+        if (!alive) return;
         setLoadError(e instanceof Error ? e.message : "Failed to load pact.");
         setLoadState("error");
       }
     }
 
-    load();
+    void Promise.resolve().then(load);
+    return () => {
+      alive = false;
+    };
   }, [shareId]);
 
   async function handleAccept() {
-    if (!address || onChainId === null) return;
+    if (!address || onChainId === null || !pkg || !sharedRow || !keyHex) return;
     setTxState("awaiting");
     setTxError(null);
     try {
       const hash = await veilpactWrite.acceptPact(address as `0x${string}`, onChainId);
       setTxHash(hash);
+      const chainPact = await syncPactFromChain(onChainId);
+      const existing = await getPactByOnChainId(onChainId);
+      const localId = existing?.id ?? `pact-${onChainId}-${address.toLowerCase()}`;
+      await storePact({
+        id: localId,
+        encryptedPkg: sharedRow.encrypted_pkg,
+        keyHex,
+        agreementRoot: chainPact.agreementRoot,
+        metadataHash: chainPact.metadataHash,
+        partyA: chainPact.partyA,
+        partyB: chainPact.partyB,
+        title: pkg.draft.title || `Pact #${onChainId}`,
+        clauseCount: chainPact.clauseCount,
+        status: chainPact.status,
+        onChainId,
+        createdAt: chainPact.createdAt ? chainPact.createdAt * 1000 : Date.now(),
+        downloaded: true,
+        rootSalt: chainPact.rootSalt || pkg.draft.pactSalt,
+        clauseCommitments: chainPact.clauseCommitments ?? pkg.commitments.map(c => c.clauseCommitment),
+        payment: pkg.draft.payment ?? null,
+        source: "accepted-counterparty",
+        role: "partyB",
+        counterparty: chainPact.partyA,
+        localPackageId: localId,
+        lastSyncedAt: Date.now(),
+        chainSnapshot: chainPact,
+      });
       setTxState("done");
+      router.push(`/pacts/${onChainId}`);
     } catch (e: unknown) {
       setTxError(e instanceof Error ? e.message : "Transaction failed");
       setTxState("error");
@@ -141,7 +182,7 @@ function CounterpartyReviewInner() {
         </div>
         <p style={{ fontSize: "0.75rem", color: "rgba(239,228,208,0.55)", lineHeight: 1.5 }}>
           The clause text was decrypted in your browser using the key embedded in the share link.
-          Only cryptographic commitments live on-chain.
+          Supabase only relays the encrypted package for demo sharing. VeilPact state is read from GenLayer, and private terms remain encrypted client-side.
         </p>
       </div>
 

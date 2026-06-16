@@ -1,18 +1,193 @@
-
 "use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle } from "lucide-react";
 import { DossierCard } from "@/components/ui/DossierCard";
 import { SealButton } from "@/components/ui/SealButton";
+import { useWalletContext } from "@/contexts/WalletContext";
+import { veilpactWrite } from "@/lib/genlayer/contract";
+import { syncPactFromChain, syncUserPactsFromChain, type SyncedPact } from "@/lib/genlayer/sync";
+import { decryptPackage, importKeyHex, type EncryptedPackage } from "@/lib/crypto/encryption";
+import { canonicalClausePayload } from "@/lib/crypto/commitments";
+import { EXPLORER_URL } from "@/lib/constants";
+import type { ClauseCommitment, PactDraft } from "@/lib/schemas/pact";
+
+type TxState = "idle" | "pending" | "done" | "error";
+
+interface DecryptedPkg {
+  draft: PactDraft;
+  commitments: ClauseCommitment[];
+}
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  background: "#0B0B10",
+  border: "1px solid rgba(239,228,208,0.18)",
+  borderRadius: 2,
+  padding: "10px 12px",
+  color: "#EFE4D0",
+  fontFamily: "IBM Plex Mono, monospace",
+  fontSize: "0.8rem",
+  outline: "none",
+};
+
+const labelStyle: React.CSSProperties = {
+  fontFamily: "IBM Plex Mono, monospace",
+  fontSize: "0.65rem",
+  textTransform: "uppercase",
+  letterSpacing: "0.12em",
+  color: "rgba(239,228,208,0.4)",
+  marginBottom: 6,
+  display: "block",
+};
 
 export default function RevealConsolePage() {
+  const { address, connected, connect, connecting } = useWalletContext();
+  const [pacts, setPacts] = useState<SyncedPact[]>([]);
+  const [pactId, setPactId] = useState("");
+  const [disputeId, setDisputeId] = useState("1");
+  const [clauseIndex, setClauseIndex] = useState("0");
+  const [evidence, setEvidence] = useState("");
+  const [txState, setTxState] = useState<TxState>("idle");
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const syncPacts = useCallback(async () => {
+    if (!address) return;
+    setPacts(await syncUserPactsFromChain(address));
+  }, [address]);
+
+  useEffect(() => {
+    if (!connected) return;
+    void Promise.resolve().then(syncPacts).catch(() => {});
+  }, [connected, syncPacts]);
+
+  async function handleReveal() {
+    if (!address) {
+      setError("Connect wallet first.");
+      return;
+    }
+    setTxState("pending");
+    setError(null);
+    setTxHash(null);
+    try {
+      const pid = Number(pactId);
+      const did = Number(disputeId);
+      const cidx = Number(clauseIndex);
+      if (!Number.isInteger(pid) || pid <= 0) throw new Error("Enter a valid pact ID.");
+      if (!Number.isInteger(did) || did <= 0) throw new Error("Enter a valid dispute ID.");
+      if (!Number.isInteger(cidx) || cidx < 0) throw new Error("Enter a valid clause index.");
+      if (!evidence.trim()) throw new Error("Evidence is required.");
+
+      const item = pacts.find(p => p.pactId === pid);
+      if (!item?.local?.encryptedPkg || !item.local.keyHex) {
+        throw new Error("Encrypted local package missing. Import your .veilpact backup or reopen the share link first.");
+      }
+
+      const key = await importKeyHex(item.local.keyHex);
+      const pkg = await decryptPackage(item.local.encryptedPkg as EncryptedPackage, key) as DecryptedPkg;
+      const clause = pkg.draft.clauses[cidx];
+      if (!clause) throw new Error("Clause index not found in local package.");
+
+      const clausePayloadJson = canonicalClausePayload(pkg.draft, clause, cidx);
+      const evidenceBundleJson = JSON.stringify({
+        claim: evidence.trim(),
+        requestedOutcome: "SETTLE",
+        submittedBy: address,
+        submittedAt: new Date().toISOString(),
+      });
+
+      const hash = await veilpactWrite.revealClauseForDispute(address, pid, did, cidx, clausePayloadJson, evidenceBundleJson);
+      setTxHash(hash);
+      await syncPactFromChain(pid);
+      await syncPacts();
+      setTxState("done");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Reveal failed");
+      setTxState("error");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-heading text-3xl text-parchment tracking-widest">REVEAL CONSOLE</h1>
-        <p className="text-sm text-muted-parchment mt-1">Selectively reveal a clause for a dispute.</p>
+        <p className="text-sm text-muted-parchment mt-1">Selectively reveal one local clause for a GenLayer dispute.</p>
       </div>
+
+      {!connected && (
+        <DossierCard gold>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="font-heading text-lg text-parchment tracking-widest">CONNECT WALLET</p>
+              <p className="text-sm text-muted-parchment mt-1">Reveal must be signed by a pact party.</p>
+            </div>
+            <SealButton onClick={connect} loading={connecting}>Connect Wallet</SealButton>
+          </div>
+        </DossierCard>
+      )}
+
+      <DossierCard>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center gap-4">
+            <div>
+              <p className="font-heading text-xl text-parchment tracking-widest">REVEAL CLAUSE</p>
+              <p className="text-xs text-muted-parchment mt-1">The clause payload is rebuilt from IndexedDB and verified against the on-chain commitment.</p>
+            </div>
+            <SealButton size="sm" variant="outline" onClick={syncPacts} disabled={!connected}>Sync from GenLayer</SealButton>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label style={labelStyle}>Pact ID</label>
+              <input style={inputStyle} inputMode="numeric" placeholder="11" value={pactId} onChange={e => setPactId(e.target.value)} />
+            </div>
+            <div>
+              <label style={labelStyle}>Dispute ID</label>
+              <input style={inputStyle} inputMode="numeric" placeholder="1" value={disputeId} onChange={e => setDisputeId(e.target.value)} />
+            </div>
+            <div>
+              <label style={labelStyle}>Clause Index</label>
+              <input style={inputStyle} inputMode="numeric" placeholder="0" value={clauseIndex} onChange={e => setClauseIndex(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Evidence</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 150, resize: "vertical" }}
+              placeholder="Party B evidence: Deployment timestamp day 18..."
+              value={evidence}
+              onChange={e => setEvidence(e.target.value)}
+            />
+          </div>
+
+          {error && (
+            <div className="flex gap-2 border border-redaction-rose/30 bg-redaction-rose/5 rounded-sm p-3">
+              <AlertTriangle size={14} className="text-redaction-rose shrink-0 mt-0.5" />
+              <p className="text-sm text-redaction-rose">{error}</p>
+            </div>
+          )}
+
+          {txState === "done" && (
+            <div className="flex gap-2 border border-verdict-green/30 bg-verdict-green/5 rounded-sm p-3">
+              <CheckCircle size={14} className="text-verdict-green shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-verdict-green">Clause revealed and submitted for GenLayer review.</p>
+                {txHash && <a href={`${EXPLORER_URL}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-verdict-green underline break-all">{txHash}</a>}
+              </div>
+            </div>
+          )}
+
+          <SealButton variant="gold" loading={txState === "pending"} disabled={!connected || txState === "pending"} onClick={handleReveal}>
+            Reveal Clause for Dispute
+          </SealButton>
+        </div>
+      </DossierCard>
+
       <DossierCard>
         <p className="text-muted-parchment text-sm">
-          Choose a dispute and reveal only the relevant clause. Other clauses remain private.
+          GenLayer is the source of truth for dispute state. IndexedDB supplies the private clause payload needed for selective reveal.
         </p>
       </DossierCard>
     </div>

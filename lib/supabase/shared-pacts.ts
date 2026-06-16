@@ -57,12 +57,3 @@ export async function fetchSharedPact(id: string): Promise<SharedPactRow> {
   if (error) throw new Error(`Supabase fetch failed: ${error.message}`);
   return data as SharedPactRow;
 }
-
-/** Update the on-chain ID after the pact is confirmed on-chain. */
-export async function updateSharedPactOnChainId(id: string, onChainId: number): Promise<void> {
-  const { error } = await supabase
-    .from("shared_pacts")
-    .update({ on_chain_id: onChainId })
-    .eq("id", id);
-  if (error) console.warn("[VeilPact] Could not update on_chain_id:", error.message);
-}

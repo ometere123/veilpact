@@ -94,7 +94,8 @@ export interface VerdictData {
 export interface DisputeOnChain {
   disputeId:        number;
   pactId:           number;
-  opener:           string;
+  opener?:          string;
+  openedBy?:        string;
   clauseIndex:      number;
   claim:            string;
   requestedOutcome: string;

@@ -9,6 +9,36 @@ import { getReadClient, getWriteClient, TransactionStatus } from './client';
 import { CONTRACT_ADDRESS } from '@/lib/constants';
 import type { PactOnChain, DisputeOnChain } from '@/lib/schemas/pact';
 
+interface GenLayerReadClient {
+  readContract(args: { address: string; functionName: string; args: unknown[] }): Promise<unknown>;
+  waitForTransactionReceipt(args: {
+    hash: string;
+    status: TransactionStatus;
+    retries: number;
+    interval: number;
+  }): Promise<GenLayerReceipt>;
+}
+
+interface GenLayerWriteClient {
+  writeContract(args: { address: string; functionName: string; args: unknown[]; value: bigint }): Promise<string>;
+}
+
+interface GenLayerReceipt {
+  consensus_data?: {
+    leader_receipt?: Array<{
+      execution_result?: string;
+      stderr?: string;
+      genvm_result?: {
+        execution_result?: string;
+        stderr?: string;
+      };
+      result?: {
+        status?: string;
+      };
+    }>;
+  };
+}
+
 // ── Guards ─────────────────────────────────────────────────────────────────────
 function assertContract() {
   if (!CONTRACT_ADDRESS || !CONTRACT_ADDRESS.startsWith('0x')) {
@@ -30,7 +60,7 @@ async function read<T>(functionName: string, args: unknown[] = []): Promise<T> {
   assertContract();
   console.log('[VeilPact read]', { address: CONTRACT_ADDRESS, functionName, args });
   const client = getReadClient();
-  const result = await (client as any).readContract({
+  const result = await (client as unknown as GenLayerReadClient).readContract({
     address: CONTRACT_ADDRESS,
     functionName,
     args,
@@ -56,7 +86,7 @@ async function write(
     expectedValue: value,
   });
 
-  const txHash = await (client as any).writeContract({
+  const txHash = await (client as unknown as GenLayerWriteClient).writeContract({
     address: CONTRACT_ADDRESS,
     functionName,
     args,
@@ -69,7 +99,7 @@ async function write(
 
 async function waitFinalized(txHash: string): Promise<unknown> {
   const client = getReadClient();
-  const receipt = await (client as any).waitForTransactionReceipt({
+  const receipt = await (client as unknown as GenLayerReadClient).waitForTransactionReceipt({
     hash:   txHash,
     status: TransactionStatus.FINALIZED,
     retries: 200,
@@ -103,7 +133,10 @@ export const veilpactRead = {
   getPact:             (pactId: number)                          => read<PactOnChain>('get_pact',            [pactId]),
   getClauseCommitment: (pactId: number, clauseIndex: number)     => read('get_clause_commitment',   [pactId, clauseIndex]),
   getDispute:          async (pactId: number, disputeId: number) => {
-    const dispute = await read<DisputeOnChain & { verdict?: { confidence?: number | string } }>('get_dispute', [pactId, disputeId]);
+    const dispute = await read<DisputeOnChain & { openedBy?: string; verdict?: { confidence?: number | string } }>('get_dispute', [pactId, disputeId]);
+    if (dispute.openedBy && !dispute.opener) {
+      dispute.opener = dispute.openedBy;
+    }
     if (dispute.verdict) {
       dispute.verdict.confidence = Number(dispute.verdict.confidence);
     }

@@ -232,6 +232,7 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
               </p>
               <p style={{ fontSize: "0.75rem", color: "rgba(239,228,208,0.55)", marginBottom: 10, lineHeight: 1.5 }}>
                 Send this link to <span style={{ color: "#EFE4D0" }}>{draft.partyB}</span>. The decryption key is embedded in the <code>#fragment</code>. It never reaches any server.
+                Supabase is used only as an encrypted handoff relay; VeilPact state is read from GenLayer.
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.3)", borderRadius: 2, padding: "8px 12px" }}>
                 <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.62rem", color: "#C9A35B", wordBreak: "break-all", flex: 1 }}>

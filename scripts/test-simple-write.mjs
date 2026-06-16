@@ -44,7 +44,7 @@ async function doWrite(fn, args, value = 0n) {
 async function main() {
   // First: read who admin is
   const admin = await read("get_admin");
-  const resolver = await read("get_resolver");
+  await read("get_resolver");
 
   // Simulate set_resolver to see if basic writes work (needs admin caller)
   await simWrite("set_resolver", [acct1.address.toLowerCase()]);

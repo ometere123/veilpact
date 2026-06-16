@@ -87,8 +87,10 @@ export function usePactWizard(address: string): WizardState {
   // The contract uses gl.message.sender_address for partyA in the root — they must match.
   useEffect(() => {
     if (!address) return;
-    setDraft(d => d.partyA === address ? d : { ...d, partyA: address });
-    setPayment(p => p.payer === "" ? { ...p, payer: address } : p);
+    queueMicrotask(() => {
+      setDraft(d => d.partyA === address ? d : { ...d, partyA: address });
+      setPayment(p => p.payer === "" ? { ...p, payer: address } : p);
+    });
   }, [address]);
 
   const updateBasics = useCallback((fields: Partial<PactDraft>) => {

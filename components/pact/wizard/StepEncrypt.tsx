@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { SealButton } from "@/components/ui/SealButton";
 import { Download, ShieldCheck, HardDrive, AlertTriangle } from "lucide-react";
+import type { WizardState } from "@/hooks/usePactWizard";
 
-interface StepEncryptProps { wizard: any; }
+interface StepEncryptProps { wizard: WizardState; }
 
 export function StepEncrypt({ wizard }: StepEncryptProps) {
-  const [encrypted, setEncrypted] = useState(!!wizard.encKeyHex);
+  const [encrypted, setEncrypted] = useState(!!wizard.encryptedId);
   const [downloaded, setDownloaded] = useState(false);
 
   const handleEncrypt = async () => {
@@ -42,7 +43,7 @@ export function StepEncrypt({ wizard }: StepEncryptProps) {
             </div>
             {encrypted
               ? <span style={{ fontSize: "0.7rem", color: "#6E9F7E", fontFamily: "IBM Plex Mono, monospace" }}>DONE</span>
-              : <SealButton size="sm" loading={wizard.loading} onClick={handleEncrypt}>Encrypt</SealButton>
+              : <SealButton size="sm" loading={wizard.busy} onClick={handleEncrypt}>Encrypt</SealButton>
             }
           </div>
 

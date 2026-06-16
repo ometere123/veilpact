@@ -1,4 +1,6 @@
--- Run this in your Supabase SQL Editor (https://supabase.com/dashboard/project/jpiefpceuiteizsuorvq/sql)
+-- Run this in your Supabase SQL Editor.
+-- Supabase is only an encrypted package relay for counterparty handoff.
+-- GenLayer remains the source of truth for pact/payment/dispute/reveal state.
 
 create table if not exists shared_pacts (
   id              uuid primary key default gen_random_uuid(),
@@ -10,18 +12,19 @@ create table if not exists shared_pacts (
   party_b         text         not null,
   clause_count    integer      not null default 0,
   payment_enabled boolean      not null default false,
+  expires_at      timestamptz,
+  used_at         timestamptz,
   created_at      timestamptz  not null default now()
 );
 
--- Row-level security: anyone can insert and read (the blob is AES-256 encrypted;
--- the key is never stored — it only travels in the URL #fragment).
 alter table shared_pacts enable row level security;
 
-create policy "allow_insert" on shared_pacts
+create policy "allow_insert_shared_pacts" on shared_pacts
   for insert with check (true);
 
-create policy "allow_select" on shared_pacts
+create policy "allow_select_shared_pacts" on shared_pacts
   for select using (true);
 
-create policy "allow_update_on_chain_id" on shared_pacts
-  for update using (true) with check (true);
+-- No public update policy.
+-- If updates are needed later, add a creator_write_token_hash flow. Do not
+-- allow anonymous users to update arbitrary share rows.

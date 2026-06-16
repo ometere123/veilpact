@@ -5,7 +5,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-void-ink">
       <SealRail />
-      <TopBar activePacts={0} openDisputes={0} />
+      <TopBar />
       <main className="ml-56 pt-14 min-h-screen">
         <div className="p-6 lg:p-8 max-w-6xl">
           {children}

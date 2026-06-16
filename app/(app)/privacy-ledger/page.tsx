@@ -4,7 +4,6 @@ import { useState }    from "react";
 import { DossierCard } from "@/components/ui/DossierCard";
 import { SealButton }  from "@/components/ui/SealButton";
 import { veilpactRead } from "@/lib/genlayer/contract";
-import { PAYMENT_DECISION } from "@/lib/constants";
 
 interface LedgerEntry {
   entryId:              string;
@@ -58,7 +57,7 @@ export default function PrivacyLedgerPage() {
       </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <SealButton onClick={load} disabled={loading}>{loading ? "Loading…" : "Fetch from Chain"}</SealButton>
+        <SealButton onClick={load} disabled={loading}>{loading ? "Syncing..." : "Sync from GenLayer"}</SealButton>
         {loaded && <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.65rem", color: "rgba(239,228,208,0.35)" }}>{entries.length} entries</p>}
       </div>
 

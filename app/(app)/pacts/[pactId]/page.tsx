@@ -1,9 +1,8 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { DossierCard }    from "@/components/ui/DossierCard";
 import { HashRibbon }     from "@/components/ui/HashRibbon";
-import { ClauseCard }     from "@/components/pact/ClauseCard";
 import { TimelineEvent }  from "@/components/dispute/TimelineEvent";
 import { PrivacyMeter }   from "@/components/privacy/PrivacyMeter";
 import { PaymentStatusCard }    from "@/components/payment/PaymentStatusCard";
@@ -14,10 +13,11 @@ import { VerdictStamp }         from "@/components/verdict/VerdictStamp";
 import { SealButton }           from "@/components/ui/SealButton";
 import { useWalletContext }      from "@/contexts/WalletContext";
 import { veilpactRead, veilpactWrite } from "@/lib/genlayer/contract";
-import { PAYMENT_STATUS_LABEL, EXPLORER_URL } from "@/lib/constants";
+import { syncPactFromChain }     from "@/lib/genlayer/sync";
+import { getPactByOnChainId, type StoredPact } from "@/lib/storage/indexeddb";
 import type { PactOnChain, DisputeOnChain } from "@/lib/schemas/pact";
 import { cn }              from "@/lib/utils";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 const TABS = ["Summary", "Payment", "Clauses", "Commitments", "Disputes", "Timeline", "Privacy"];
 
@@ -31,33 +31,43 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
   const [disputes, setDisputes] = useState<DisputeOnChain[]>([]);
+  const [localPact, setLocalPact] = useState<StoredPact | null>(null);
+  const [reveals, setReveals] = useState<unknown[]>([]);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
 
-  async function loadPact() {
+  const loadPact = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await veilpactRead.getPact(numId);
+      const data = await syncPactFromChain(numId);
       setPact(data);
+      setLastSyncedAt(Date.now());
+      setLocalPact(await getPactByOnChainId(numId) ?? null);
+      setReveals(await veilpactRead.getReveals(numId) as unknown[]);
       // Load disputes if any
       if (data.disputeCount > 0) {
         const ds = await Promise.all(
-          Array.from({ length: data.disputeCount }, (_, i) => veilpactRead.getDispute(numId, i))
+          Array.from({ length: data.disputeCount }, (_, i) => veilpactRead.getDispute(numId, i + 1))
         );
         setDisputes(ds);
+      } else {
+        setDisputes([]);
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load pact");
     } finally {
       setLoading(false);
     }
-  }
+  }, [numId]);
 
-  useEffect(() => { loadPact(); }, [numId]);
+  useEffect(() => {
+    void Promise.resolve().then(loadPact);
+  }, [loadPact]);
 
   async function handleAccept() {
     if (!address || !pact) return;
     await veilpactWrite.acceptPact(address as `0x${string}`, numId);
-    loadPact();
+    await loadPact();
   }
 
   if (loading) {
@@ -77,7 +87,6 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
     );
   }
 
-  const isPartyA = address?.toLowerCase() === pact.partyA?.toLowerCase();
   const isPartyB = address?.toLowerCase() === pact.partyB?.toLowerCase();
   const canAccept = isPartyB && pact.status === "PENDING_COUNTERPARTY";
 
@@ -90,13 +99,16 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
         <div>
           <h1 className="font-heading text-3xl text-parchment tracking-widest">PACT #{pactId}</h1>
           <p className="text-xs text-muted-parchment mt-1 font-mono">
+            Last synced from GenLayer: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : "not synced"}
+          </p>
+          <p className="text-xs text-muted-parchment mt-1 font-mono">
             {pact.partyA?.slice(0, 10)}… ↔ {pact.partyB?.slice(0, 10)}…
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={loadPact} className="text-muted-parchment hover:text-parchment transition-colors p-1">
-            <RefreshCw size={14} />
-          </button>
+          <SealButton size="sm" variant="outline" onClick={loadPact}>
+            <RefreshCw size={12} /> Sync from GenLayer
+          </SealButton>
           <span style={{
             border: `1px solid ${pact.status === "ACTIVE" ? "rgba(110,159,126,0.4)" : "rgba(239,228,208,0.2)"}`,
             color: pact.status === "ACTIVE" ? "#6E9F7E" : "rgba(239,228,208,0.6)",
@@ -142,6 +154,8 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
           <DossierCard><p className="text-xs text-muted-parchment">Revealed</p><p className="font-mono text-sm text-parchment mt-1">{pact.revealedCount ?? 0}</p></DossierCard>
           <DossierCard><p className="text-xs text-muted-parchment">Disputes</p><p className="font-mono text-sm text-parchment mt-1">{pact.disputeCount ?? 0}</p></DossierCard>
           <DossierCard><p className="text-xs text-muted-parchment">Created</p><p className="font-mono text-sm text-parchment mt-1">{pact.createdAt ? new Date(pact.createdAt * 1000).toLocaleDateString() : "-"}</p></DossierCard>
+          <DossierCard><p className="text-xs text-muted-parchment">Local Private Package</p><p className="font-mono text-sm text-parchment mt-1">{localPact ? "Available in this browser" : "Missing"}</p></DossierCard>
+          <DossierCard><p className="text-xs text-muted-parchment">Local Source</p><p className="font-mono text-sm text-parchment mt-1">{localPact?.source ?? "chain-only"}</p></DossierCard>
           <div className="col-span-2">
             <DossierCard>
               <p className="text-xs text-muted-parchment mb-1">Root Salt</p>
@@ -223,6 +237,9 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
       {tab === "Privacy" && (
         <DossierCard>
           <PrivacyMeter total={pact.clauseCount ?? 0} revealed={pact.revealedCount ?? 0} />
+          <p className="text-xs text-muted-parchment mt-3 font-mono">
+            Reveal records loaded from GenLayer: {reveals.length}
+          </p>
         </DossierCard>
       )}
 

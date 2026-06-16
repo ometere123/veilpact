@@ -19,7 +19,6 @@ import { createHash } from "node:crypto";
 const CONTRACT = process.env.VEILPACT_CONTRACT_ADDRESS;
 const PK1 = process.env.VEILPACT_PK1;
 const PK2 = process.env.VEILPACT_PK2;
-const NETWORK = "studionet";
 const missing = [
   ["VEILPACT_CONTRACT_ADDRESS", CONTRACT],
   ["VEILPACT_PK1", PK1],
@@ -169,7 +168,6 @@ async function testUnfundedPact() {
   console.log("  clausePayload:", clausePayload);
   console.log("  clauseCommitment:", clauseCommitment);
 
-  const metaSalt   = "0xmetasalt01";
   const metaPayload = canonicalJson({
     category: "SERVICES", description: "Smoke test pact", duration: "1 month",
     jurisdiction: "on-chain", network: "studionet", title: "Smoke Test Unfunded",

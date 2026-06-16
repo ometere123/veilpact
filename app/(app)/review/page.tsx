@@ -53,7 +53,7 @@ export default function GenLayerReviewPage() {
       </div>
 
       <DossierCard>
-        <p className="text-xs font-mono text-muted-parchment uppercase tracking-widest mb-3">Load Verdict</p>
+        <p className="text-xs font-mono text-muted-parchment uppercase tracking-widest mb-3">Sync Verdict</p>
         <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
           <div>
             <p style={{ fontSize: "0.6rem", fontFamily: "IBM Plex Mono, monospace", color: "rgba(239,228,208,0.4)", marginBottom: 4 }}>PACT ID</p>
@@ -64,7 +64,7 @@ export default function GenLayerReviewPage() {
             <input style={inp} type="number" min="0" placeholder="0" value={disputeId} onChange={e => setDisputeId(e.target.value)} />
           </div>
           <SealButton onClick={loadDispute} disabled={loading || !pactId || !disputeId}>
-            {loading ? "Loading…" : "Load"}
+            {loading ? "Syncing..." : "Sync from GenLayer"}
           </SealButton>
         </div>
         {error && <p style={{ color: "#B85C70", fontSize: "0.78rem", marginTop: 10, fontFamily: "IBM Plex Mono, monospace" }}>{error}</p>}
@@ -109,7 +109,7 @@ export default function GenLayerReviewPage() {
 
       {!dispute && !loading && (
         <DossierCard>
-          <p className="text-muted-parchment text-sm">Enter a pact ID and dispute ID above to load a verdict.</p>
+          <p className="text-muted-parchment text-sm">Enter a pact ID and dispute ID above to sync a verdict from GenLayer.</p>
         </DossierCard>
       )}
     </div>

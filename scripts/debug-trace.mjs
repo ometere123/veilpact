@@ -13,7 +13,6 @@ const PK2 = process.env.VEILPACT_PK2;
 const acct1 = createAccount(PK1);
 const acct2 = createAccount(PK2);
 const client1 = createClient({ chain: studionet, account: acct1 });
-const client2 = createClient({ chain: studionet, account: acct2 });
 
 const A = acct1.address;
 const B = acct2.address;

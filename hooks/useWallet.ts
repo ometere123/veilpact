@@ -13,8 +13,11 @@ async function switchToGenLayer(): Promise<void> {
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: CHAIN_ID_HEX }],
     });
-  } catch (err: any) {
-    if (err?.code === 4902 || err?.code === -32603) {
+  } catch (err: unknown) {
+    const code = typeof err === "object" && err !== null && "code" in err
+      ? Number((err as { code?: unknown }).code)
+      : null;
+    if (code === 4902 || code === -32603) {
       await window.ethereum!.request({
         method: 'wallet_addEthereumChain',
         params: [{

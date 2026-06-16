@@ -1,7 +1,6 @@
 
 "use client";
 import { DossierCard } from "@/components/ui/DossierCard";
-import { SealButton } from "@/components/ui/SealButton";
 
 export default function SettingsPage() {
   return (

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { SealButton } from "@/components/ui/SealButton";
 import { CLAUSE_TYPES, REMEDY_PREFERENCES } from "@/lib/constants";
 import { Plus, Trash2, Lock } from "lucide-react";
+import type { Clause } from "@/lib/schemas/pact";
+import type { WizardState } from "@/hooks/usePactWizard";
 
 const INPUT_STYLE: React.CSSProperties = {
   backgroundColor: "#0B0B10",
@@ -16,13 +18,29 @@ const INPUT_STYLE: React.CSSProperties = {
   width: "100%",
 };
 
-const EMPTY_CLAUSE = { clauseType: "DELIVERY", clauseTitle: "", clauseText: "", remedyPreference: "RENEGOTIATE_OR_SETTLE", revealSensitivity: "MEDIUM" as const, evidenceExpected: "" };
+type ClauseForm = {
+  clauseType: string;
+  clauseTitle: string;
+  clauseText: string;
+  remedyPreference: string;
+  revealSensitivity: Clause["sensitivity"];
+  evidenceExpected: string;
+};
 
-interface StepClausesProps { wizard: any; }
+const EMPTY_CLAUSE: ClauseForm = {
+  clauseType: "DELIVERY",
+  clauseTitle: "",
+  clauseText: "",
+  remedyPreference: "RENEGOTIATE_OR_SETTLE",
+  revealSensitivity: "PRIVATE",
+  evidenceExpected: "",
+};
+
+interface StepClausesProps { wizard: WizardState; }
 
 export function StepClauses({ wizard }: StepClausesProps) {
   const clauses = wizard.draft.clauses ?? [];
-  const [form, setForm]   = useState(EMPTY_CLAUSE);
+  const [form, setForm] = useState<ClauseForm>(EMPTY_CLAUSE);
   const [adding, setAdding] = useState(false);
 
   const save = () => {
@@ -34,18 +52,17 @@ export function StepClauses({ wizard }: StepClausesProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Existing clauses */}
       {clauses.length === 0 && !adding && (
         <div style={{ border: "1px dashed rgba(239,228,208,0.18)", borderRadius: 2, padding: 32, textAlign: "center", color: "rgba(239,228,208,0.4)", fontSize: "0.875rem" }}>
           No clauses yet. Add at least one clause.
         </div>
       )}
 
-      {clauses.map((c: any, i: number) => (
+      {clauses.map((c: Clause, i: number) => (
         <div key={i} style={{ border: "1px solid rgba(239,228,208,0.18)", backgroundColor: "#14141C", borderRadius: 2, padding: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.7rem", color: "rgba(239,228,208,0.4)" }}>#{String(i+1).padStart(2,"0")} · {c.type}</span>
+              <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.7rem", color: "rgba(239,228,208,0.4)" }}>#{String(i + 1).padStart(2, "0")} - {c.type}</span>
               <p style={{ color: "#EFE4D0", fontSize: "0.875rem", fontWeight: 500, marginTop: 2 }}>{c.title}</p>
               <p style={{ color: "rgba(239,228,208,0.6)", fontSize: "0.8rem", marginTop: 4, lineHeight: 1.5 }}>{c.text}</p>
             </div>
@@ -62,7 +79,6 @@ export function StepClauses({ wizard }: StepClausesProps) {
         </div>
       ))}
 
-      {/* Add clause form */}
       {adding && (
         <div style={{ border: "1px solid rgba(201,163,91,0.3)", backgroundColor: "#14141C", borderRadius: 2, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -74,8 +90,8 @@ export function StepClauses({ wizard }: StepClausesProps) {
             </div>
             <div>
               <label style={{ fontSize: "0.65rem", color: "rgba(239,228,208,0.4)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Sensitivity</label>
-              <select style={{ ...INPUT_STYLE, marginTop: 4 }} value={form.revealSensitivity} onChange={e => setForm(p => ({ ...p, revealSensitivity: e.target.value as any }))}>
-                {["LOW","MEDIUM","HIGH"].map(s => <option key={s} value={s}>{s}</option>)}
+              <select style={{ ...INPUT_STYLE, marginTop: 4 }} value={form.revealSensitivity} onChange={e => setForm(p => ({ ...p, revealSensitivity: e.target.value as Clause["sensitivity"] }))}>
+                {["PUBLIC", "PRIVATE", "REDACTED"].map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           </div>

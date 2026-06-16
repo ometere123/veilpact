@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SealButton } from "@/components/ui/SealButton";
 import { PACT_CATEGORIES } from "@/lib/constants";
+import type { WizardState } from "@/hooks/usePactWizard";
 
 const FIELD = (label: string, children: React.ReactNode) => (
   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -22,7 +23,7 @@ const INPUT_STYLE: React.CSSProperties = {
   width: "100%",
 };
 
-interface StepBasicsProps { wizard: any; }
+interface StepBasicsProps { wizard: WizardState; }
 
 export function StepBasics({ wizard }: StepBasicsProps) {
   const d = wizard.draft;

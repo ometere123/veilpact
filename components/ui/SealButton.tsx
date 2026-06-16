@@ -1,13 +1,14 @@
-import { motion } from "framer-motion";
+import { motion, type HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { type ButtonHTMLAttributes } from "react";
+import type { ReactNode } from "react";
 
 type Variant = "gold" | "violet" | "ghost" | "danger" | "outline";
 
-interface SealButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface SealButtonProps extends Omit<HTMLMotionProps<"button">, "children"> {
   variant?: Variant;
   size?: "sm" | "md" | "lg";
   loading?: boolean;
+  children?: ReactNode;
 }
 
 const variants: Record<Variant, string> = {
@@ -46,7 +47,7 @@ export function SealButton({
         className,
       )}
       disabled={disabled || loading}
-      {...(props as any)}
+      {...props}
     >
       {loading && (
         <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />

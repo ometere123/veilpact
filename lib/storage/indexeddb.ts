@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from "idb";
-import type { PaymentSetup } from "@/lib/schemas/pact";
+import type { PactOnChain, PaymentSetup } from "@/lib/schemas/pact";
 
 export interface StoredPact {
   id:                string;
@@ -18,6 +18,12 @@ export interface StoredPact {
   rootSalt:          string;
   clauseCommitments: string[];
   payment:           PaymentSetup | null;
+  source?:           "creator" | "accepted-counterparty" | "imported" | "local-cache";
+  role?:             "partyA" | "partyB" | "payer" | "payee" | "observer";
+  counterparty?:     string;
+  localPackageId?:   string;
+  lastSyncedAt?:     number;
+  chainSnapshot?:    Partial<PactOnChain>;
 }
 
 export interface StoredDraft {
@@ -61,12 +67,48 @@ export async function getAllPacts(): Promise<StoredPact[]> {
   return db.getAll("pacts");
 }
 
+export async function getPactByOnChainId(onChainId: number): Promise<StoredPact | undefined> {
+  const pacts = await getAllPacts();
+  return pacts.find(pact => pact.onChainId === onChainId);
+}
+
+export async function getPactByAgreementRoot(agreementRoot: string): Promise<StoredPact | undefined> {
+  const pacts = await getAllPacts();
+  return pacts.find(pact => pact.agreementRoot?.toLowerCase() === agreementRoot.toLowerCase());
+}
+
 export async function updatePactStatus(id: string, status: string, onChainId?: number): Promise<void> {
   const db   = await getDB();
   const pact = await db.get("pacts", id) as StoredPact | undefined;
   if (!pact) return;
   pact.status = status;
   if (onChainId !== undefined) pact.onChainId = onChainId;
+  pact.lastSyncedAt = Date.now();
+  await db.put("pacts", pact);
+}
+
+export async function updatePactChainCache(id: string, chainPact: PactOnChain): Promise<void> {
+  const db = await getDB();
+  const pact = await db.get("pacts", id) as StoredPact | undefined;
+  if (!pact) return;
+  pact.status = chainPact.status;
+  pact.onChainId = chainPact.pactId;
+  pact.lastSyncedAt = Date.now();
+  pact.chainSnapshot = {
+    pactId: chainPact.pactId,
+    status: chainPact.status,
+    acceptedAt: chainPact.acceptedAt,
+    closedAt: chainPact.closedAt,
+    paymentStatus: chainPact.paymentStatus,
+    fundedAmount: chainPact.fundedAmount,
+    payerClaimable: chainPact.payerClaimable,
+    payeeClaimable: chainPact.payeeClaimable,
+    payerClaimed: chainPact.payerClaimed,
+    payeeClaimed: chainPact.payeeClaimed,
+    settlementApplied: chainPact.settlementApplied,
+    disputeCount: chainPact.disputeCount,
+    revealedCount: chainPact.revealedCount,
+  };
   await db.put("pacts", pact);
 }
 
