@@ -9,7 +9,8 @@ import { fetchSharedPact, type SharedPactRow } from "@/lib/supabase/shared-pacts
 import { importKeyHex, decryptPackage } from "@/lib/crypto/encryption";
 import { veilpactWrite }             from "@/lib/genlayer/contract";
 import { syncPactFromChain }         from "@/lib/genlayer/sync";
-import { getPactByOnChainId, storePact } from "@/lib/storage/indexeddb";
+import { getPactByOnChainId, storePact, type StoredPact } from "@/lib/storage/indexeddb";
+import { downloadVeilpactFile }      from "@/lib/storage/veilpact-file";
 import { EXPLORER_URL }              from "@/lib/constants";
 import type { PactDraft, ClauseCommitment } from "@/lib/schemas/pact";
 import { CheckCircle, AlertTriangle, ShieldCheck, Coins } from "lucide-react";
@@ -32,6 +33,16 @@ function formatGEN(wei: string | bigint): string {
   } catch { return "0"; }
 }
 
+function readShareKeyFromFragment(): string {
+  if (typeof window === "undefined") return "";
+  const fragment = window.location.hash.replace(/^#/, "");
+  if (!fragment) return "";
+  if (fragment.startsWith("key=")) {
+    return new URLSearchParams(fragment).get("key") ?? "";
+  }
+  return decodeURIComponent(fragment);
+}
+
 function CounterpartyReviewInner() {
   const { address, connected, connect } = useWalletContext();
   const searchParams = useSearchParams();
@@ -45,6 +56,7 @@ function CounterpartyReviewInner() {
   const [keyHex,    setKeyHex]    = useState("");
   const [onChainId, setOnChainId] = useState<number | null>(null);
   const [paymentEnabled, setPaymentEnabled] = useState(false);
+  const [rememberUnlockKey, setRememberUnlockKey] = useState(false);
 
   const [txState,   setTxState]   = useState<TxState>("idle");
   const [txHash,    setTxHash]    = useState<string | null>(null);
@@ -59,9 +71,7 @@ function CounterpartyReviewInner() {
     async function load() {
       try {
         setLoadState("loading");
-        const keyHex = typeof window !== "undefined"
-          ? window.location.hash.replace(/^#/, "")
-          : "";
+        const keyHex = readShareKeyFromFragment();
         if (!keyHex) throw new Error("No decryption key in URL. Make sure you opened the full share link.");
 
         const row = await fetchSharedPact(shareId!);
@@ -93,15 +103,20 @@ function CounterpartyReviewInner() {
     setTxState("awaiting");
     setTxError(null);
     try {
+      const expectedPartyB = (sharedRow.party_b || pkg.draft.partyB).toLowerCase();
+      if (address.toLowerCase() !== expectedPartyB) {
+        throw new Error(`This share is addressed to ${expectedPartyB}. Switch to that wallet before accepting.`);
+      }
       const hash = await veilpactWrite.acceptPact(address as `0x${string}`, onChainId);
       setTxHash(hash);
       const chainPact = await syncPactFromChain(onChainId);
       const existing = await getPactByOnChainId(onChainId);
       const localId = existing?.id ?? `pact-${onChainId}-${address.toLowerCase()}`;
-      await storePact({
+      const localPact: StoredPact = {
         id: localId,
         encryptedPkg: sharedRow.encrypted_pkg,
-        keyHex,
+        keyHex: rememberUnlockKey ? keyHex : undefined,
+        keyRemembered: rememberUnlockKey,
         agreementRoot: chainPact.agreementRoot,
         metadataHash: chainPact.metadataHash,
         partyA: chainPact.partyA,
@@ -121,7 +136,9 @@ function CounterpartyReviewInner() {
         localPackageId: localId,
         lastSyncedAt: Date.now(),
         chainSnapshot: chainPact,
-      });
+      };
+      await storePact(localPact);
+      downloadVeilpactFile(localPact, keyHex);
       setTxState("done");
       router.push(`/pacts/${onChainId}`);
     } catch (e: unknown) {
@@ -144,6 +161,8 @@ function CounterpartyReviewInner() {
     fontFamily: "IBM Plex Mono, monospace", fontSize: "0.7rem",
     color: "#EFE4D0", wordBreak: "break-all",
   };
+  const shareExpiryLabel = sharedRow?.expires_at ? new Date(sharedRow.expires_at).toLocaleString() : null;
+  const expectedCounterparty = sharedRow?.party_b ?? pkg?.draft.partyB ?? "";
 
   // ── Render ──────────────────────────────────────────────────────────────────
   if (!shareId) {
@@ -182,7 +201,9 @@ function CounterpartyReviewInner() {
         </div>
         <p style={{ fontSize: "0.75rem", color: "rgba(239,228,208,0.55)", lineHeight: 1.5 }}>
           The clause text was decrypted in your browser using the key embedded in the share link.
+          Anyone with this full link can decrypt the shared pact package. Only use it from the intended counterparty wallet.
           Supabase only relays the encrypted package for demo sharing. VeilPact state is read from GenLayer, and private terms remain encrypted client-side.
+          {shareExpiryLabel ? ` Relay copy expires: ${shareExpiryLabel}.` : ""}
         </p>
       </div>
 
@@ -213,7 +234,7 @@ function CounterpartyReviewInner() {
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div><p style={lbl}>Party A (Creator)</p><p style={val}>{pkg.draft.partyA}</p></div>
-              <div><p style={lbl}>Party B (You)</p><p style={val}>{pkg.draft.partyB}</p></div>
+              <div><p style={lbl}>Party B (Expected Wallet)</p><p style={val}>{expectedCounterparty || pkg.draft.partyB}</p></div>
               <div><p style={lbl}>Category</p><p style={val}>{pkg.draft.category}</p></div>
               <div><p style={lbl}>Jurisdiction</p><p style={val}>{pkg.draft.jurisdiction || "-"}</p></div>
               <div><p style={lbl}>Duration</p><p style={val}>{pkg.draft.duration || "-"}</p></div>
@@ -279,6 +300,21 @@ function CounterpartyReviewInner() {
             </div>
           )}
 
+          <label style={{ ...card, display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <input
+              type="checkbox"
+              checked={rememberUnlockKey}
+              onChange={e => setRememberUnlockKey(e.target.checked)}
+              style={{ marginTop: 2 }}
+            />
+            <span>
+              <span style={{ display: "block", fontSize: "0.875rem", color: "#EFE4D0" }}>Remember unlock key on this device?</span>
+              <span style={{ display: "block", fontSize: "0.75rem", color: "rgba(239,228,208,0.55)", lineHeight: 1.5 }}>
+                Default is off. After accept, VeilPact downloads a .veilpact recovery file so this browser cache is not your only copy.
+              </span>
+            </span>
+          </label>
+
           {/* Wallet guard */}
           {!connected && (
             <div style={{ ...card, borderColor: "rgba(201,163,91,0.3)", textAlign: "center" }}>
@@ -290,13 +326,13 @@ function CounterpartyReviewInner() {
           )}
 
           {/* Address mismatch warning */}
-          {connected && address && pkg.draft.partyB &&
-            address.toLowerCase() !== pkg.draft.partyB.toLowerCase() && (
+          {connected && address && (expectedCounterparty || pkg.draft.partyB) &&
+            address.toLowerCase() !== (expectedCounterparty || pkg.draft.partyB).toLowerCase() && (
             <div style={{ ...card, borderColor: "rgba(201,163,91,0.4)", backgroundColor: "rgba(201,163,91,0.05)" }}>
               <div style={{ display: "flex", gap: 8 }}>
                 <AlertTriangle size={14} style={{ color: "#C9A35B", flexShrink: 0, marginTop: 1 }} />
                 <p style={{ color: "#C9A35B", fontSize: "0.8rem" }}>
-                  This pact is addressed to <strong>{pkg.draft.partyB}</strong> but your connected wallet is <strong>{address}</strong>.
+                  This pact is addressed to <strong>{expectedCounterparty || pkg.draft.partyB}</strong> but your connected wallet is <strong>{address}</strong>.
                   Switch to the correct wallet before accepting.
                 </p>
               </div>
@@ -343,7 +379,7 @@ function CounterpartyReviewInner() {
                   txState === "awaiting" ||
                   onChainId === null ||
                   (!!address && !!pkg.draft.partyB &&
-                    address.toLowerCase() !== pkg.draft.partyB.toLowerCase())
+                    address.toLowerCase() !== (expectedCounterparty || pkg.draft.partyB).toLowerCase())
                 }
                 loading={txState === "awaiting"}
                 onClick={handleAccept}

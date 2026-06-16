@@ -4,7 +4,8 @@ import type { PactOnChain, PaymentSetup } from "@/lib/schemas/pact";
 export interface StoredPact {
   id:                string;
   encryptedPkg:      object;
-  keyHex:            string;
+  keyHex?:           string;
+  keyRemembered?:    boolean;
   agreementRoot:     string;
   metadataHash:      string;
   partyA:            string;
@@ -36,7 +37,7 @@ let _db: IDBPDatabase | null = null;
 
 async function getDB(): Promise<IDBPDatabase> {
   if (_db) return _db;
-  _db = await openDB("veilpact", 3, {
+  _db = await openDB("veilpact", 4, {
     upgrade(db, oldVersion) {
       if (oldVersion < 1) {
         const pacts = db.createObjectStore("pacts", { keyPath: "id" });
@@ -84,6 +85,14 @@ export async function updatePactStatus(id: string, status: string, onChainId?: n
   pact.status = status;
   if (onChainId !== undefined) pact.onChainId = onChainId;
   pact.lastSyncedAt = Date.now();
+  await db.put("pacts", pact);
+}
+
+export async function updatePactBackupStatus(id: string, downloaded = true): Promise<void> {
+  const db = await getDB();
+  const pact = await db.get("pacts", id) as StoredPact | undefined;
+  if (!pact) return;
+  pact.downloaded = downloaded;
   await db.put("pacts", pact);
 }
 

@@ -3,12 +3,12 @@ import "./globals.css";
 import { WalletProvider } from "@/contexts/WalletContext";
 
 export const metadata: Metadata = {
-  title: "VeilPact: Private agreements. Public fairness only when it matters.",
-  description: "VeilPact is a GenLayer-native private two-party agreement protocol with clause-level commitments, AES-256 encryption, and AI arbitration.",
+  title: "VeilPact: Private by default. Selective reveal when trust breaks.",
+  description: "VeilPact is a GenLayer-native private clause-level pact settlement protocol with encrypted local terms and selective reveal.",
   icons: { icon: "/icon.svg", shortcut: "/icon.svg" },
   openGraph: {
     title: "VeilPact",
-    description: "Private agreements. Public fairness only when it matters.",
+    description: "Private by default. Committed on GenLayer. Selective reveal only when trust breaks.",
     images: [{ url: "/logo.svg" }],
   },
 };

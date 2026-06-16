@@ -30,7 +30,7 @@ export function SealRail() {
       {/* Logo */}
       <div className="px-5 py-5 border-b border-bone-border">
         <p className="font-heading text-2xl text-parchment tracking-widest">VEILPACT</p>
-        <p className="text-xs text-muted-parchment font-mono mt-0.5">Private agreements</p>
+        <p className="text-xs text-muted-parchment font-mono mt-0.5">Selective reveal pacts</p>
       </div>
 
       {/* Nav */}
@@ -58,7 +58,7 @@ export function SealRail() {
       {/* Footer */}
       <div className="px-5 py-4 border-t border-bone-border">
         <p className="text-xs text-muted-parchment/50 leading-relaxed">
-          VeilPact is a private agreement coordination demo. Not legal advice.
+          Private by default. Committed on GenLayer. Not legal advice.
         </p>
       </div>
     </aside>

@@ -47,6 +47,7 @@ export default function RevealConsolePage() {
   const [pactId, setPactId] = useState("");
   const [disputeId, setDisputeId] = useState("1");
   const [clauseIndex, setClauseIndex] = useState("0");
+  const [unlockKey, setUnlockKey] = useState("");
   const [evidence, setEvidence] = useState("");
   const [txState, setTxState] = useState<TxState>("idle");
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -80,11 +81,15 @@ export default function RevealConsolePage() {
       if (!evidence.trim()) throw new Error("Evidence is required.");
 
       const item = pacts.find(p => p.pactId === pid);
-      if (!item?.local?.encryptedPkg || !item.local.keyHex) {
+      if (!item?.local?.encryptedPkg) {
         throw new Error("Encrypted local package missing. Import your .veilpact backup or reopen the share link first.");
       }
+      const keyHex = item.local.keyHex?.trim() || unlockKey.trim();
+      if (!keyHex) {
+        throw new Error("Unlock key is not remembered on this device. Paste the recovery key from your .veilpact backup or reopen the original share link.");
+      }
 
-      const key = await importKeyHex(item.local.keyHex);
+      const key = await importKeyHex(keyHex);
       const pkg = await decryptPackage(item.local.encryptedPkg as EncryptedPackage, key) as DecryptedPkg;
       const clause = pkg.draft.clauses[cidx];
       if (!clause) throw new Error("Clause index not found in local package.");
@@ -150,6 +155,19 @@ export default function RevealConsolePage() {
               <label style={labelStyle}>Clause Index</label>
               <input style={inputStyle} inputMode="numeric" placeholder="0" value={clauseIndex} onChange={e => setClauseIndex(e.target.value)} />
             </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Recovery / Unlock Key</label>
+            <input
+              style={inputStyle}
+              placeholder="Optional if this browser remembered the key. Otherwise paste 0x..."
+              value={unlockKey}
+              onChange={e => setUnlockKey(e.target.value)}
+            />
+            <p className="text-xs text-muted-parchment mt-1">
+              This key is used for this reveal only and is not saved unless you explicitly remembered it during create/accept.
+            </p>
           </div>
 
           <div>

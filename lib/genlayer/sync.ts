@@ -88,7 +88,7 @@ function normalizeUserPact(raw: RawUserPact): UserPactSummary {
 }
 
 function localHasPackage(local: StoredPact | null | undefined): local is StoredPact {
-  return !!local?.encryptedPkg && !!local?.keyHex;
+  return !!local?.encryptedPkg;
 }
 
 function titleFor(local: StoredPact | null, chain: PactOnChain | UserPactSummary | null): string {

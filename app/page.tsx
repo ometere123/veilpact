@@ -20,13 +20,13 @@ export default function LandingPage() {
       <section className="max-w-5xl mx-auto px-8 py-20 flex flex-col lg:flex-row items-center gap-16">
         <div className="flex-1">
           <p style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "clamp(3rem,7vw,5rem)", lineHeight: 1, color: "#EFE4D0", marginBottom: "1.5rem" }}>
-            PRIVATE AGREEMENTS.<br/>
-            <span style={{ color: "#C9A35B" }}>PUBLIC FAIRNESS</span><br/>
-            ONLY WHEN IT MATTERS.
+            PRIVATE BY DEFAULT.<br/>
+            <span style={{ color: "#C9A35B" }}>SELECTIVE REVEAL</span><br/>
+            WHEN TRUST BREAKS.
           </p>
           <p style={{ color: "rgba(239,228,208,0.64)", fontSize: "1.1rem", lineHeight: 1.6, marginBottom: "2rem", maxWidth: "28rem" }}>
-            VeilPact lets two parties commit to confidential terms, keep them private during normal execution,
-            and reveal only the disputed clause if GenLayer needs to resolve a conflict.
+            VeilPact is a private clause-level pact settlement protocol: commit terms on GenLayer,
+            keep plaintext client-side, and reveal only the disputed clause when settlement review is needed.
           </p>
           <div className="flex gap-3 flex-wrap">
             <Link href="/new-pact"><SealButton size="lg">Create Private Pact</SealButton></Link>
@@ -63,7 +63,7 @@ export default function LandingPage() {
             { icon: Scale,         title: "WHAT GENLAYER JUDGES",                body: "When a clause is revealed, validators check: Is this clause part of the original agreement? Is the evidence strong enough? What outcome is proportional?", warn: false },
             { icon: Eye,           title: "DISPUTE-ONLY DISCLOSURE",             body: "If no dispute arises, the full agreement remains private forever. Only the specific disputed clause, verified by hash, is submitted for GenLayer review.", warn: false },
             { icon: Shield,        title: "PRIVACY BOUNDARIES",                  body: "VeilPact tracks what has been revealed in an on-chain Privacy Ledger. Overdisclosure warnings prevent parties from revealing more than necessary.", warn: false },
-            { icon: AlertTriangle, title: "NOT LEGAL ADVICE",                    body: "VeilPact is a private agreement coordination and dispute review demo. It is not legal advice and does not replace formal legal contracts, courts, or regulated arbitration.", warn: true },
+            { icon: AlertTriangle, title: "NOT LEGAL ADVICE",                    body: "VeilPact is a private clause-level pact settlement demo. It is not legal advice and does not replace formal legal contracts, courts, or regulated arbitration.", warn: true },
           ].map(({ icon: Icon, title, body, warn }) => (
             <div key={title} className="rounded-sm p-5" style={{ border: warn ? "1px solid rgba(184,92,112,0.25)" : "1px solid rgba(239,228,208,0.18)", backgroundColor: "#14141C" }}>
               <Icon className="w-5 h-5 mb-3" style={{ color: warn ? "#B85C70" : "#C9A35B" }} />
@@ -76,7 +76,7 @@ export default function LandingPage() {
 
       <footer className="px-8 py-6 flex justify-between text-xs" style={{ borderTop: "1px solid rgba(239,228,208,0.18)", color: "rgba(239,228,208,0.3)" }}>
         <span>VeilPact · GenLayer StudioNet</span>
-        <span>Private agreements. Public fairness only when it matters.</span>
+        <span>Private by default. Selective reveal only when trust breaks.</span>
       </footer>
     </div>
   );

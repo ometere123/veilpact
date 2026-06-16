@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect }       from "react";
+import { useState }                  from "react";
 import { SealButton }                from "@/components/ui/SealButton";
 import { HashRibbon }                from "@/components/ui/HashRibbon";
 import { getPact, updatePactStatus } from "@/lib/storage/indexeddb";
@@ -30,19 +30,14 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
   const [txHash,  setTxHash]  = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [showKey,   setShowKey]   = useState(false);
-  const [keyHex,    setKeyHex]    = useState<string | null>(null);
   const [shareUrl,  setShareUrl]  = useState<string | null>(null);
   const [copied,    setCopied]    = useState(false);
 
   const root      = commitments[0]?.agreementRoot ?? "";
   const meta      = commitments[0]?.metadataHash  ?? "";
   const hashes    = commitments.map(c => c.clauseCommitment);
-  const canSubmit = hashes.length > 0 && !!encryptedId && !!address && txState === "idle";
-
-  useEffect(() => {
-    if (!encryptedId) return;
-    getPact(encryptedId).then(p => { if (p) setKeyHex(p.keyHex); }).catch(() => {});
-  }, [encryptedId]);
+  const keyHex    = wizard.unlockKeyHex;
+  const canSubmit = hashes.length > 0 && !!encryptedId && !!address && wizard.backupDownloaded && txState === "idle";
 
   async function handleSubmit() {
     if (!address) { setTxError("Wallet not connected"); return; }
@@ -81,6 +76,10 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
       // The decryption key is NEVER uploaded — it travels in the URL #fragment only.
       const stored = encryptedId ? await getPact(encryptedId) : null;
       if (stored) {
+        const shareKeyHex = wizard.unlockKeyHex ?? stored.keyHex;
+        if (!shareKeyHex) {
+          throw new Error("Unlock key is not available in this session. Re-open your .veilpact backup before sharing.");
+        }
         const shareId = await uploadSharedPact({
           encryptedPkg:   stored.encryptedPkg as import("@/lib/crypto/encryption").EncryptedPackage,
           agreementRoot:  root,
@@ -92,7 +91,7 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
           paymentEnabled: payment.enabled,
         });
         const origin = typeof window !== "undefined" ? window.location.origin : "";
-        setShareUrl(`${origin}/counterparty-review?id=${shareId}#${stored.keyHex}`);
+        setShareUrl(`${origin}/counterparty-review?id=${shareId}#key=${encodeURIComponent(shareKeyHex)}`);
       }
 
       setTxState("done");
@@ -133,7 +132,7 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
         </p>
         <p style={{ fontSize: "0.8rem", color: "rgba(239,228,208,0.7)", marginTop: 6, lineHeight: 1.6 }}>
           Only cryptographic commitments{payment.enabled ? " and payment config" : ""} go to GenLayer via <code>writeContract</code>.
-          Clause text, encryption keys, and evidence never touch the chain.
+          Clause text, unlock keys, and evidence never touch the chain.
         </p>
       </div>
 
@@ -165,13 +164,18 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
 
         <div style={{ ...col, borderColor: "rgba(184,92,112,0.2)" }}>
           <p style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "0.9rem", letterSpacing: "0.1em", color: "#B85C70" }}>LOCAL ONLY (PRIVATE)</p>
-          <div><p style={lbl}>Clause Texts</p><p style={{ ...val, color: "rgba(239,228,208,0.35)", fontStyle: "italic" }}>Encrypted in IndexedDB</p></div>
+          <div><p style={lbl}>Clause Texts</p><p style={{ ...val, color: "rgba(239,228,208,0.35)", fontStyle: "italic" }}>Encrypted package cached in IndexedDB</p></div>
           <div>
             <p style={lbl}>Encryption Key</p>
             <button onClick={() => setShowKey(k => !k)} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: "rgba(239,228,208,0.4)", fontSize: "0.7rem", fontFamily: "IBM Plex Mono, monospace", padding: 0 }}>
               {showKey ? <EyeOff size={12} /> : <Eye size={12} />} {showKey ? "hide" : "reveal"}
             </button>
             {showKey && keyHex && <p style={{ ...val, color: "#B85C70", marginTop: 4 }}>{keyHex}</p>}
+            {showKey && !keyHex && (
+              <p style={{ ...val, color: "rgba(239,228,208,0.45)", marginTop: 4 }}>
+                Not remembered in IndexedDB. Use the .veilpact recovery file if you need it later.
+              </p>
+            )}
           </div>
           <div><p style={lbl}>Root Salt</p><p style={{ ...val, color: "rgba(239,228,208,0.35)", fontStyle: "italic" }}>Stored in .veilpact backup</p></div>
           <div><p style={lbl}>Clause Salts</p><p style={{ ...val, color: "rgba(239,228,208,0.35)", fontStyle: "italic" }}>{draft.clauses.length} salts, encrypted</p></div>
@@ -232,7 +236,8 @@ export function StepSubmit({ wizard, address, onPactCreated }: Props) {
               </p>
               <p style={{ fontSize: "0.75rem", color: "rgba(239,228,208,0.55)", marginBottom: 10, lineHeight: 1.5 }}>
                 Send this link to <span style={{ color: "#EFE4D0" }}>{draft.partyB}</span>. The decryption key is embedded in the <code>#fragment</code>. It never reaches any server.
-                Supabase is used only as an encrypted handoff relay; VeilPact state is read from GenLayer.
+                Anyone with the full link can decrypt the shared pact package, so only send it to the intended counterparty.
+                The relay copy expires in 7 days. Supabase is used only as an encrypted handoff relay; VeilPact state is read from GenLayer.
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.3)", borderRadius: 2, padding: "8px 12px" }}>
                 <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.62rem", color: "#C9A35B", wordBreak: "break-all", flex: 1 }}>

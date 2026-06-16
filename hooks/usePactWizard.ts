@@ -9,7 +9,7 @@ import {
   canonicalClausePayload,
 } from "@/lib/crypto/commitments";
 import { generateEncryptionKey, exportKeyHex, encryptPackage } from "@/lib/crypto/encryption";
-import { storePact } from "@/lib/storage/indexeddb";
+import { getPact, storePact, updatePactBackupStatus } from "@/lib/storage/indexeddb";
 import { downloadVeilpactFile } from "@/lib/storage/veilpact-file";
 
 function randomHex(bytes = 32): string {
@@ -25,6 +25,9 @@ export interface WizardState {
   draft:       PactDraft;
   commitments: ClauseCommitment[];
   encryptedId: string | null;
+  unlockKeyHex: string | null;
+  backupDownloaded: boolean;
+  rememberUnlockKey: boolean;
   rootSalt:    string | null;
   payment:     PaymentSetup;
   error:       string | null;
@@ -34,8 +37,9 @@ export interface WizardState {
   updateClause:        (index: number, fields: Partial<Clause>) => void;
   removeClause:        (index: number) => void;
   generateCommitments: () => Promise<void>;
-  encryptAndStore:     () => Promise<void>;
-  downloadBackup:      () => Promise<void>;
+  setRememberUnlockKey: (remember: boolean) => void;
+  encryptAndStore:     () => Promise<boolean>;
+  downloadBackup:      () => Promise<boolean>;
   updatePayment:       (fields: Partial<PaymentSetup>) => void;
   nextStep:            () => void;
   prevStep:            () => void;
@@ -78,6 +82,9 @@ export function usePactWizard(address: string): WizardState {
   const [draft,       setDraft]       = useState<PactDraft>(() => blankDraft(address));
   const [commitments, setCommitments] = useState<ClauseCommitment[]>([]);
   const [encryptedId, setEncryptedId] = useState<string | null>(null);
+  const [unlockKeyHex, setUnlockKeyHex] = useState<string | null>(null);
+  const [backupDownloaded, setBackupDownloaded] = useState(false);
+  const [rememberUnlockKey, setRememberUnlockKey] = useState(false);
   const [rootSalt,    setRootSalt]    = useState<string | null>(null);
   const [payment,     setPayment]     = useState<PaymentSetup>(() => defaultPayment(address, ""));
   const [error,       setError]       = useState<string | null>(null);
@@ -170,7 +177,7 @@ export function usePactWizard(address: string): WizardState {
   }, [draft]);
 
   const encryptAndStore = useCallback(async () => {
-    if (commitments.length === 0) { setError("Generate commitments first"); return; }
+    if (commitments.length === 0) { setError("Generate commitments first"); return false; }
     setBusy(true);
     setError(null);
     try {
@@ -185,7 +192,8 @@ export function usePactWizard(address: string): WizardState {
       await storePact({
         id,
         encryptedPkg:      pkg,
-        keyHex,
+        keyHex:            rememberUnlockKey ? keyHex : undefined,
+        keyRemembered:     rememberUnlockKey,
         agreementRoot:     root,
         metadataHash:      meta,
         partyA:            draft.partyA,
@@ -199,21 +207,36 @@ export function usePactWizard(address: string): WizardState {
         rootSalt:          rootSalt ?? "",
         clauseCommitments: hashes,
         payment:           payment,
+        source:            "creator",
+        role:              "partyA",
       });
       setEncryptedId(id);
+      setUnlockKeyHex(keyHex);
+      setBackupDownloaded(false);
+      return true;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Encryption failed");
+      return false;
     } finally {
       setBusy(false);
     }
-  }, [commitments, draft, rootSalt, payment]);
+  }, [commitments, draft, rootSalt, payment, rememberUnlockKey]);
 
   const downloadBackup = useCallback(async () => {
-    if (!encryptedId) { setError("Encrypt first"); return; }
-    const { getPact } = await import("@/lib/storage/indexeddb");
-    const stored = await getPact(encryptedId);
-    if (stored) downloadVeilpactFile(stored);
-  }, [encryptedId]);
+    if (!encryptedId) { setError("Encrypt first"); return false; }
+    setError(null);
+    try {
+      const stored = await getPact(encryptedId);
+      if (!stored) throw new Error("Encrypted pact package was not found in this browser.");
+      downloadVeilpactFile(stored, unlockKeyHex ?? stored.keyHex);
+      await updatePactBackupStatus(encryptedId, true);
+      setBackupDownloaded(true);
+      return true;
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Backup download failed");
+      return false;
+    }
+  }, [encryptedId, unlockKeyHex]);
 
   const MAX_STEP = 8 as const;
   const nextStep = useCallback(() => setStep(s => Math.min(MAX_STEP, s + 1) as WizardStep), []);
@@ -221,9 +244,9 @@ export function usePactWizard(address: string): WizardState {
   const goToStep = useCallback((s: WizardStep) => setStep(s), []);
 
   return {
-    step, draft, commitments, encryptedId, rootSalt, payment, error, busy,
+    step, draft, commitments, encryptedId, unlockKeyHex, backupDownloaded, rememberUnlockKey, rootSalt, payment, error, busy,
     updateBasics, updatePayment, addClause, updateClause, removeClause,
-    generateCommitments, encryptAndStore, downloadBackup,
+    generateCommitments, setRememberUnlockKey, encryptAndStore, downloadBackup,
     nextStep, prevStep, goToStep,
   };
 }

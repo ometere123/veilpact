@@ -59,9 +59,9 @@ export default function NewPactPage() {
           NEW PRIVATE PACT
         </h1>
         <p style={{ color: "rgba(239,228,208,0.64)", fontSize: "0.875rem", marginTop: 4 }}>
-          Draft terms privately. Commitments go on GenLayer. Plaintext stays local.
+          Private by default. Committed on GenLayer. Selective reveal only when trust breaks.
           {wizard.payment.enabled && (
-            <span style={{ color: "#C9A35B" }}> · GEN-backed settlement enabled.</span>
+            <span style={{ color: "#C9A35B" }}> GEN settlement enabled only when needed.</span>
           )}
         </p>
       </div>

@@ -9,16 +9,15 @@ interface StepEncryptProps { wizard: WizardState; }
 
 export function StepEncrypt({ wizard }: StepEncryptProps) {
   const [encrypted, setEncrypted] = useState(!!wizard.encryptedId);
-  const [downloaded, setDownloaded] = useState(false);
+  const downloaded = wizard.backupDownloaded;
 
   const handleEncrypt = async () => {
-    await wizard.encryptAndStore();
-    setEncrypted(true);
+    const ok = await wizard.encryptAndStore();
+    setEncrypted(ok || !!wizard.encryptedId);
   };
 
   const handleDownload = async () => {
     await wizard.downloadBackup();
-    setDownloaded(true);
   };
 
   return (
@@ -27,18 +26,34 @@ export function StepEncrypt({ wizard }: StepEncryptProps) {
         <div style={{ display: "flex", gap: 10, marginBottom: 16, padding: 12, border: "1px solid rgba(184,92,112,0.2)", borderRadius: 2, backgroundColor: "rgba(184,92,112,0.04)" }}>
           <AlertTriangle size={14} style={{ color: "#B85C70", flexShrink: 0, marginTop: 2 }} />
           <p style={{ fontSize: "0.8rem", color: "#B85C70", lineHeight: 1.5 }}>
-            VeilPact encrypts the pact package locally in this browser. Keep your downloaded backup safe.
-            Losing the package may make selective reveal impossible.
+            This file is your private recovery copy. If you lose it, VeilPact can still show the pact on GenLayer,
+            but you may not be able to reveal or review private clauses from this device.
           </p>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <label style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "12px 16px", border: "1px solid rgba(239,228,208,0.18)", borderRadius: 2, opacity: encrypted ? 0.55 : 1 }}>
+            <input
+              type="checkbox"
+              checked={wizard.rememberUnlockKey}
+              disabled={encrypted}
+              onChange={e => wizard.setRememberUnlockKey(e.target.checked)}
+              style={{ marginTop: 2 }}
+            />
+            <span>
+              <span style={{ display: "block", fontSize: "0.875rem", color: "#EFE4D0" }}>Remember unlock key on this device?</span>
+              <span style={{ display: "block", fontSize: "0.7rem", color: "rgba(239,228,208,0.45)", lineHeight: 1.5 }}>
+                Default is off. IndexedDB stores the encrypted package; the unlock key stays in your .veilpact recovery file unless you opt in.
+              </span>
+            </span>
+          </label>
+
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", border: "1px solid rgba(239,228,208,0.18)", borderRadius: 2 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <ShieldCheck size={16} style={{ color: encrypted ? "#6E9F7E" : "rgba(239,228,208,0.3)" }} />
               <div style={{ marginLeft: 8 }}>
                 <p style={{ fontSize: "0.875rem", color: "#EFE4D0" }}>Encrypt Package</p>
-                <p style={{ fontSize: "0.7rem", color: "rgba(239,228,208,0.4)" }}>AES-GCM · stored in IndexedDB</p>
+                <p style={{ fontSize: "0.7rem", color: "rgba(239,228,208,0.4)" }}>AES-GCM package cached in IndexedDB</p>
               </div>
             </div>
             {encrypted
@@ -51,8 +66,8 @@ export function StepEncrypt({ wizard }: StepEncryptProps) {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Download size={16} style={{ color: downloaded ? "#6E9F7E" : "rgba(239,228,208,0.3)" }} />
               <div style={{ marginLeft: 8 }}>
-                <p style={{ fontSize: "0.875rem", color: "#EFE4D0" }}>Download .veilpact Backup</p>
-                <p style={{ fontSize: "0.7rem", color: "rgba(239,228,208,0.4)" }}>Encrypted · store it safely</p>
+                <p style={{ fontSize: "0.875rem", color: "#EFE4D0" }}>Download .veilpact Backup Required</p>
+                <p style={{ fontSize: "0.7rem", color: "rgba(239,228,208,0.4)" }}>Encrypted package + recovery key; store it safely</p>
               </div>
             </div>
             {downloaded
@@ -66,7 +81,9 @@ export function StepEncrypt({ wizard }: StepEncryptProps) {
             <div style={{ marginLeft: 8 }}>
               <p style={{ fontSize: "0.875rem", color: "#EFE4D0" }}>Local Storage</p>
               <p style={{ fontSize: "0.7rem", color: encrypted ? "#6E9F7E" : "rgba(239,228,208,0.4)" }}>
-                {encrypted ? "Encrypted package stored in IndexedDB" : "Waiting for encryption..."}
+                {encrypted
+                  ? `Encrypted package stored. Unlock key ${wizard.rememberUnlockKey ? "remembered by request" : "not stored in IndexedDB"}.`
+                  : "Waiting for encryption..."}
               </p>
             </div>
           </div>
@@ -75,7 +92,7 @@ export function StepEncrypt({ wizard }: StepEncryptProps) {
 
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <SealButton variant="ghost" onClick={wizard.prevStep}>Back</SealButton>
-        <SealButton disabled={!encrypted} onClick={wizard.nextStep}>Continue to Submit</SealButton>
+        <SealButton disabled={!encrypted || !downloaded} onClick={wizard.nextStep}>Continue to Submit</SealButton>
       </div>
     </div>
   );

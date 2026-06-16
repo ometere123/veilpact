@@ -50,7 +50,7 @@ export function StepFund({ wizard, address, onChainPactId }: Props) {
         <div style={{ border: "1px solid rgba(110,159,126,0.3)", backgroundColor: "rgba(110,159,126,0.05)", borderRadius: 2, padding: 16 }}>
           <p style={{ fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.1em", color: "#6E9F7E" }}>NO FUNDING REQUIRED</p>
           <p style={{ fontSize: "0.8rem", color: "rgba(239,228,208,0.6)", marginTop: 6 }}>
-            This pact has no GEN-backed settlement. Share it with your counterparty to accept.
+            This pact has no GEN settlement configured. Share it with your counterparty to accept.
           </p>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
