@@ -89,9 +89,24 @@ export function StepFund({ wizard, address, onChainPactId }: Props) {
           <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.75rem", color: "#C9A35B" }}>FUND THIS PACT</p>
         </div>
         <p style={{ fontSize: "0.8rem", color: "rgba(239,228,208,0.7)", lineHeight: 1.6 }}>
-          As the payer you must send <strong style={{ color: "#EFE4D0" }}>{payment.expectedAmount} base units ({amountGen} GEN)</strong> to the contract
-          by calling <code>fund_pact</code>. GEN stays locked until both parties agree to release or a settlement is applied.
-          This is a <strong style={{ color: "#EFE4D0" }}>contract method call</strong>, not a plain transfer.
+          As the payer you must send <strong style={{ color: "#EFE4D0" }}>{amountGen} GEN</strong> to the contract.
+          GEN stays locked until both parties agree to release or a settlement is applied.
+        </p>
+      </div>
+
+      {/* Wallet display warning */}
+      <div style={{ border: "1px solid rgba(184,92,112,0.25)", backgroundColor: "rgba(184,92,112,0.04)", borderRadius: 2, padding: 12 }}>
+        <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.65rem", color: "#B85C70", marginBottom: 4 }}>WALLET DISPLAY WARNING</p>
+        <p style={{ fontSize: "0.78rem", color: "rgba(239,228,208,0.6)", lineHeight: 1.6 }}>
+          Rabby and MetaMask cannot decode GenLayer contract calls on custom networks.
+          Your wallet popup will show a <strong style={{ color: "#EFE4D0" }}>wrong token amount</strong> — ignore it.
+          The actual amount sent to the contract is always:
+        </p>
+        <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "1rem", color: "#C9A35B", marginTop: 8, textAlign: "center", letterSpacing: "0.05em" }}>
+          {amountGen} GEN
+        </p>
+        <p style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "0.6rem", color: "rgba(239,228,208,0.25)", textAlign: "center", marginTop: 2 }}>
+          = {payment.expectedAmount} wei
         </p>
       </div>
 
