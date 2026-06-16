@@ -5,7 +5,7 @@ import { createClient, createAccount } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
 import { TransactionStatus } from "genlayer-js/types";
 
-const CONTRACT = "0xFEe7B8D0e25B5bE16cc48350fB09A5657732B641";
+const CONTRACT = process.env.VEILPACT_CONTRACT_ADDRESS ?? "0x25d0c8C70f2B6fbbDf93dA8a0885a54e5785B492";
 // Admin was set to whoever deployed. Let's check what admin is:
 const PK1 = process.env.VEILPACT_PK1;
 
