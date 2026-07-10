@@ -281,6 +281,14 @@ export const veilpactWrite = {
     return txHash;
   },
 
+  // Validators independently fetch the dispute's evidence URL and reach
+  // strict-equality consensus on its SHA-256 before a status is stored.
+  verifyEvidenceUrl: async (walletAddress: `0x${string}`, pactId: number, disputeId: number) => {
+    const txHash = await write(walletAddress, 'verify_evidence_url', [pactId, disputeId]);
+    await waitFinalized(txHash);
+    return txHash;
+  },
+
   closeDispute: async (walletAddress: `0x${string}`, pactId: number, disputeId: number) => {
     const txHash = await write(walletAddress, 'close_dispute', [pactId, disputeId]);
     await waitFinalized(txHash);

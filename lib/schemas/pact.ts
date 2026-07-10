@@ -101,6 +101,9 @@ export interface DisputeOnChain {
   requestedOutcome: string;
   status:           string;
   createdAt:        number;
+  evidenceUrl?:        string;
+  evidenceUrlSha256?:  string;
+  evidenceUrlStatus?:  string;
   verdict:          VerdictData | null;
 }
 

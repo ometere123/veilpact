@@ -54,6 +54,12 @@ PACT_STATUS_RESOLVED_RENEGOTIATE = "RESOLVED_RENEGOTIATE"
 PACT_STATUS_RESOLVED_SETTLE = "RESOLVED_SETTLE"
 PACT_STATUS_CLOSED = "CLOSED"
 
+EVIDENCE_URL_NONE = "NONE"
+EVIDENCE_URL_UNVERIFIED = "UNVERIFIED"
+EVIDENCE_URL_VERIFIED = "VERIFIED"
+EVIDENCE_URL_HASH_MISMATCH = "HASH_MISMATCH"
+EVIDENCE_URL_FAILED_FETCH = "FAILED_FETCH"
+
 DISPUTE_STATUS_OPEN = "OPEN"
 DISPUTE_STATUS_REVEALED = "REVEALED"
 DISPUTE_STATUS_RESOLVED = "RESOLVED"
@@ -159,6 +165,9 @@ class Dispute:
     response_json: str
     revealed_clause_payload_json: str
     evidence_bundle_json: str
+    evidence_url: str
+    evidence_url_sha256: str
+    evidence_url_status: str
     revealed: bool
     review_count: u256
     verdict: Verdict
@@ -527,7 +536,7 @@ class VeilPact(gl.Contract):
             pact.close_proposed_by = self._empty_addr()
             pact.close_proposed_target = self._empty_addr()
         dispute_id = pact.dispute_count + u256(1)
-        dispute = Dispute(dispute_id, pact_id, gl.message.sender_address, clause_index, claim, requested_outcome, "", DISPUTE_STATUS_OPEN, "", "", "", False, u256(0), self._empty_verdict())
+        dispute = Dispute(dispute_id, pact_id, gl.message.sender_address, clause_index, claim, requested_outcome, "", DISPUTE_STATUS_OPEN, "", "", "", "", "", EVIDENCE_URL_NONE, False, u256(0), self._empty_verdict())
         self.disputes[self._dispute_key(pact_id, dispute_id)] = dispute
         pact.dispute_count = dispute_id
         pact.status = PACT_STATUS_DISPUTED
@@ -613,6 +622,15 @@ class VeilPact(gl.Contract):
         dispute.evidence_summary = self._shorten(evidence_bundle_json, 500)
         dispute.revealed_clause_payload_json = clause_payload_json
         dispute.evidence_bundle_json = evidence_bundle_json
+        evidence_url = str(evidence_data.get("evidenceUrl", ""))
+        evidence_url_sha256 = str(evidence_data.get("evidenceSha256", "")).lower()
+        if evidence_url:
+            self._require(evidence_url.startswith("https://"), "evidenceUrl must be https")
+            self._require(len(evidence_url) <= 500, "evidenceUrl too long")
+            self._require_hash(evidence_url_sha256, "evidenceSha256")
+            dispute.evidence_url = evidence_url
+            dispute.evidence_url_sha256 = evidence_url_sha256
+            dispute.evidence_url_status = EVIDENCE_URL_UNVERIFIED
         dispute.revealed = True
         self.disputes[d_key] = dispute
         pact.revealed_count = reveal_index
@@ -622,6 +640,40 @@ class VeilPact(gl.Contract):
         entry = PrivacyEntry(self.privacy_entry_count, pact_id, dispute_id, clause_index, gl.message.sender_address, "DISPUTE_REVEAL", True, self._now(), False, "SAFE_TO_REVIEW", "NO_PAYMENT_ACTION")
         self.privacy_ledger[self.privacy_entry_count] = entry
         self._run_dispute_review(pact_id, dispute_id, clause_payload_json, evidence_bundle_json)
+
+    @gl.public.write
+    def verify_evidence_url(self, pact_id: u256, dispute_id: u256) -> str:
+        self._require(pact_id in self.pacts, "Pact not found")
+        pact = self.pacts[pact_id]
+        self._require(self._is_party(pact), "Not a party to this pact")
+        d_key = self._dispute_key(pact_id, dispute_id)
+        self._require(d_key in self.disputes, "Dispute not found")
+        dispute = self.disputes[d_key]
+        self._require(dispute.evidence_url_status != EVIDENCE_URL_NONE, "Dispute has no evidence URL")
+        self._require(dispute.evidence_url_status == EVIDENCE_URL_UNVERIFIED, "Evidence URL already verified")
+        url = dispute.evidence_url
+        claimed_hash = dispute.evidence_url_sha256
+
+        # Every validator fetches the URL independently and hashes the raw
+        # response body; strict_eq requires all nodes to agree on the digest
+        # before anything is stored. A VERIFIED status is validator consensus,
+        # not a self-report.
+        def fetch_and_hash() -> str:
+            try:
+                body = gl.nondet.web.get(url).body
+            except Exception:
+                return "FETCH_ERROR"
+            return "0x" + hashlib.sha256(body).hexdigest()
+
+        outcome = gl.eq_principle.strict_eq(fetch_and_hash)
+        if outcome == "FETCH_ERROR":
+            dispute.evidence_url_status = EVIDENCE_URL_FAILED_FETCH
+        elif outcome.lower() == claimed_hash:
+            dispute.evidence_url_status = EVIDENCE_URL_VERIFIED
+        else:
+            dispute.evidence_url_status = EVIDENCE_URL_HASH_MISMATCH
+        self.disputes[d_key] = dispute
+        return dispute.evidence_url_status
 
     def _run_dispute_review(self, pact_id: u256, dispute_id: u256, clause_payload_json: str, evidence_bundle_json: str) -> None:
         pact = self.pacts[pact_id]
@@ -654,6 +706,11 @@ class VeilPact(gl.Contract):
                 "counterpartyResponse": dispute.response_json if dispute.response_json else "No counterparty response submitted.",
             },
             "evidenceBundle": evidence_data,
+            "evidenceUrlVerification": {
+                "evidenceUrl": dispute.evidence_url,
+                "status": dispute.evidence_url_status,
+                "note": "VERIFIED means every validator independently fetched this URL and the SHA-256 of the response body matched the claimed hash. UNVERIFIED means verification has not run. Treat HASH_MISMATCH as evidence tampering.",
+            },
             "payment": {
                 "hasFundedSettlement": int(pact.funded_amount) > 0,
                 "paymentStatus": pact.payment_status,
@@ -672,8 +729,7 @@ class VeilPact(gl.Contract):
                 "Do not recommend enforcement for illegal, coercive, exploitative, blackmail, weapons, drugs, or evasion-of-law content.",
             ],
         }
-        def review_context() -> str:
-            return self._canonical_json_from_obj(context)
+        context_json = self._canonical_json_from_obj(context)
         task = """
 Return ONLY a valid JSON object with exactly these fields:
 {
@@ -703,7 +759,70 @@ If paymentDecision is REFUND_TO_PAYER, payerRefundBps=10000 and payeeReleaseBps=
 If paymentDecision is SPLIT_PAYMENT, payerRefundBps + payeeReleaseBps must equal 10000.
 If safetyLabel is REJECTED_UNSAFE, paymentDecision should be REFUND_TO_PAYER.
 """
-        raw = gl.eq_principle.prompt_non_comparative(review_context, task=task, criteria=criteria)
+        prompt_text = context_json + "\n\n" + task + "\n\n" + criteria
+
+        # Custom leader/validator consensus (gl.vm.run_nondet_unsafe).
+        # The leader proposes a verdict; every validator independently re-runs
+        # the same prompt and must materially agree on the decision fields
+        # before the leader's verdict is accepted. This prevents a single
+        # malicious leader from steering the settlement: formatting-only
+        # validation of the leader's JSON is not consensus.
+        def extract_decision(raw_text: str) -> dict:
+            start = raw_text.find("{")
+            end = raw_text.rfind("}") + 1
+            data = json.loads(raw_text[start:end])
+            action = str(data.get("recommendedAction", ""))
+            payment = str(data.get("paymentDecision", ""))
+            safety = str(data.get("safetyLabel", ""))
+            unsafe = safety == "REJECTED_UNSAFE" or action == "REJECTED_UNSAFE"
+            # Collapse the action into outcome groups so honest validators that
+            # differ on adjacent labels still agree, while opposite outcomes
+            # (settle vs continue) are a hard disagreement.
+            if action in ("SETTLE", "REJECTED_UNSAFE"):
+                action_group = "FINAL_SETTLE"
+            elif action in ("CONTINUE", "DISMISS"):
+                action_group = "NO_BREACH"
+            else:
+                action_group = "REVISIT"
+            # Reduce the payment decision to the payee's implied share so the
+            # economic outcome is compared directly. None = no money moves.
+            if payment == "RELEASE_TO_PAYEE":
+                payee_bps = 10000
+            elif payment == "REFUND_TO_PAYER":
+                payee_bps = 0
+            elif payment == "SPLIT_PAYMENT":
+                payee_bps = max(0, min(10000, int(data.get("payeeReleaseBps", 0))))
+            else:
+                payee_bps = -1
+            return {"action_group": action_group, "payee_bps": payee_bps, "unsafe": unsafe}
+
+        def leader_fn() -> str:
+            return gl.nondet.exec_prompt(prompt_text)
+
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            try:
+                leader_decision = extract_decision(str(leader_result.calldata))
+            except Exception:
+                return False  # unparseable leader output is rejected, not stored
+            try:
+                my_decision = extract_decision(gl.nondet.exec_prompt(prompt_text))
+            except Exception:
+                return False
+            if leader_decision["unsafe"] != my_decision["unsafe"]:
+                return False
+            if leader_decision["action_group"] != my_decision["action_group"]:
+                return False
+            leader_bps = leader_decision["payee_bps"]
+            my_bps = my_decision["payee_bps"]
+            if (leader_bps < 0) != (my_bps < 0):
+                return False  # one says money moves, the other says it does not
+            if leader_bps >= 0 and abs(leader_bps - my_bps) > 2000:
+                return False  # economic outcomes must be within 20% of escrow
+            return True
+
+        raw = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
         verdict = self._parse_verdict(raw, dispute, pact)
         dispute.verdict = verdict
         dispute.review_count = dispute.review_count + u256(1)
@@ -990,6 +1109,7 @@ If safetyLabel is REJECTED_UNSAFE, paymentDecision should be REFUND_TO_PAYER.
             "disputeId": int(d.dispute_id), "pactId": int(d.pact_id), "openedBy": str(d.opened_by),
             "clauseIndex": int(d.clause_index), "claim": d.claim, "requestedOutcome": d.requested_outcome,
             "evidenceSummary": d.evidence_summary, "status": d.status, "hasResponse": bool(d.response_json),
+            "evidenceUrl": d.evidence_url, "evidenceUrlSha256": d.evidence_url_sha256, "evidenceUrlStatus": d.evidence_url_status,
             "revealed": d.revealed, "reviewCount": int(d.review_count), "verdict": verdict,
         }
 

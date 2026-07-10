@@ -18,7 +18,8 @@ Connect your wallet and create a pact with a counterparty: each clause is hashed
 - **Clause-level privacy** - agreements are committed as per-clause SHA-256 hashes; clause text never goes on-chain until a dispute requires it
 - **Selective reveal** - a dispute exposes only the single disputed clause, never the whole agreement
 - **Commit-verified reveals** - a revealed clause must re-hash to the exact stored commitment and re-derive the agreement root, so nobody can swap terms after signing
-- **AI consensus arbitration** - validators independently review the reveal via `gl.eq_principle.prompt_non_comparative` and must agree before a verdict is stored
+- **AI consensus arbitration** - a custom leader/validator pattern (`gl.vm.run_nondet_unsafe`): every validator independently re-runs the review and must agree on the recommended action, the safety label, and the economic outcome (payee share within 20% of escrow) before a verdict is stored - a single malicious leader cannot steer the settlement
+- **On-chain evidence verification** - a disputing party can attach a public evidence URL and its SHA-256; validators independently fetch the URL with `gl.nondet.web.get` and reach strict-equality consensus on the digest, so a `VERIFIED` status is validator consensus, not a self-report
 - **Optional GEN escrow** - fund at creation or any time before activation; verdicts settle in basis points via pull-payment claims
 - **Privacy ledger** - every reveal is recorded on-chain with an over-disclosure warning flag, so disclosure itself is auditable
 
@@ -104,7 +105,24 @@ Payment status runs in parallel: `UNFUNDED -> FUNDED -> LOCKED -> CLAIMABLE -> C
 | `respond_to_dispute(...)` | Stores the counterparty response; re-runs consensus review if the clause is already revealed |
 | `apply_settlement_decision(...)` | Converts the consensus verdict's basis points into claimable escrow balances |
 
-The review runs through `gl.eq_principle.prompt_non_comparative` with a strict JSON task and criteria; validators must materially agree before any verdict is written. The verdict is then re-validated inside the contract - enums are whitelisted, basis points clamped and forced consistent with the payment decision, weak-evidence settlements downgraded, and a deterministic prohibited-content screen can override the outcome to `REJECTED_UNSAFE` with a full refund. All contract errors raise `gl.vm.UserError` for clean on-chain surfacing.
+The review runs through a custom leader/validator consensus built on `gl.vm.run_nondet_unsafe`. The leader's LLM proposes the verdict JSON; each validator independently re-runs the identical prompt and compares the decision fields deterministically - the unsafe flag must match exactly, the recommended action must fall in the same outcome group (settle / no-breach / revisit), and the implied payee share of the escrow must agree within 2,000 basis points. Formatting-only validation of the leader's output is not consensus; here a biased leader gets voted down and the network rotates leaders. The accepted verdict is then re-validated inside the contract - enums are whitelisted, basis points clamped and forced consistent with the payment decision, weak-evidence settlements downgraded, and a deterministic prohibited-content screen can override the outcome to `REJECTED_UNSAFE` with a full refund. All contract errors raise `gl.vm.UserError` for clean on-chain surfacing.
+
+---
+
+## Evidence verification
+
+When revealing a clause for a dispute, a party can optionally attach a public evidence URL and its SHA-256 hash in the evidence bundle (`evidenceUrl`, `evidenceSha256`). Any party can then call **`verify_evidence_url`**: every GenLayer validator independently fetches the URL with `gl.nondet.web.get` and hashes the raw response body, and `gl.eq_principle.strict_eq` requires every validator to agree on the digest before a status is written to state.
+
+Outcomes stored on-chain:
+
+| Status | Meaning |
+| --- | --- |
+| `UNVERIFIED` | An evidence URL was submitted but verification has not run yet |
+| `VERIFIED` | Validators fetched the URL and the SHA-256 matches the claimed hash |
+| `HASH_MISMATCH` | Validators fetched successfully but the hash does not match |
+| `FAILED_FETCH` | The URL was unreachable |
+
+Use commit-pinned URLs (raw GitHub with a commit hash, not a branch name) so the content is byte-identical across every validator's independent fetch.
 
 ---
 
@@ -116,7 +134,7 @@ The review runs through `gl.eq_principle.prompt_non_comparative` with a strict J
 | Chain ID | 61999 |
 | RPC | https://studio.genlayer.com/api |
 | Explorer | https://explorer-studio.genlayer.com |
-| Contract | `0x46e6bDA56F35F28Ce24427DE4253E23FbaDcFaf6` |
+| Contract | `0x9204f36BBf281C2B2B8DC986d7266CD4c10999a8` |
 | Source | `contracts/VeilPact.py` |
 
 Key methods:
@@ -131,6 +149,7 @@ Key methods:
 | `propose_close` / `confirm_close` / `cancel_close` | Two-signature mutual close with a chosen payout target |
 | `open_dispute` / `respond_to_dispute` | Raise a claim against one clause; counterparty replies |
 | `reveal_clause_for_dispute` | Commit-verified selective reveal; triggers consensus review |
+| `verify_evidence_url` | Validators independently fetch and hash the dispute's evidence URL |
 | `apply_settlement_decision` | Apply the AI verdict to the escrow |
 | `resolver_settle` | Resolver fallback settlement for stuck escrows |
 | `claim_payer_refund` / `claim_payee_payment` | Pull-payment withdrawals |
@@ -142,7 +161,7 @@ Key methods:
 
 | Layer | Tech |
 | --- | --- |
-| Intelligent contract | GenLayer Python (py-genlayer v0.2.18) - `gl.eq_principle.prompt_non_comparative`, `@gl.public.write.payable`, `gl.vm.UserError` |
+| Intelligent contract | GenLayer Python (py-genlayer v0.2.18) - `gl.vm.run_nondet_unsafe` custom validator, `gl.nondet.web.get` + `gl.eq_principle.strict_eq` evidence verification, `@gl.public.write.payable`, `gl.vm.UserError` |
 | Frontend | Next.js 16 App Router · React 19 · TypeScript · Tailwind CSS 4 |
 | Web3 | GenLayer JS SDK (`genlayer-js` 1.1.8) · Viem |
 | Private clause storage | Browser IndexedDB (`idb`) - clause text never leaves the client until a reveal |

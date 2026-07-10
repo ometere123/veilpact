@@ -49,6 +49,9 @@ export default function RevealConsolePage() {
   const [clauseIndex, setClauseIndex] = useState("0");
   const [unlockKey, setUnlockKey] = useState("");
   const [evidence, setEvidence] = useState("");
+  const [evidenceUrl, setEvidenceUrl] = useState("");
+  const [evidenceSha256, setEvidenceSha256] = useState("");
+  const [hashing, setHashing] = useState(false);
   const [txState, setTxState] = useState<TxState>("idle");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,11 +98,18 @@ export default function RevealConsolePage() {
       if (!clause) throw new Error("Clause index not found in local package.");
 
       const clausePayloadJson = canonicalClausePayload(pkg.draft, clause, cidx);
+      const url = evidenceUrl.trim();
+      const urlHash = evidenceSha256.trim().toLowerCase();
+      if (url) {
+        if (!url.startsWith("https://")) throw new Error("Evidence URL must be https.");
+        if (!/^0x[0-9a-f]{64}$/.test(urlHash)) throw new Error("Evidence SHA-256 must be 0x + 64 hex chars. Use Compute Hash or paste the digest.");
+      }
       const evidenceBundleJson = JSON.stringify({
         claim: evidence.trim(),
         requestedOutcome: "SETTLE",
         submittedBy: address,
         submittedAt: new Date().toISOString(),
+        ...(url ? { evidenceUrl: url, evidenceSha256: urlHash } : {}),
       });
 
       const hash = await veilpactWrite.revealClauseForDispute(address, pid, did, cidx, clausePayloadJson, evidenceBundleJson);
@@ -179,6 +189,50 @@ export default function RevealConsolePage() {
               onChange={e => setEvidence(e.target.value)}
             />
           </div>
+
+          <div>
+            <label style={labelStyle}>Evidence URL (optional — verified on-chain by GenLayer validators)</label>
+            <input
+              style={inputStyle}
+              placeholder="https://raw.githubusercontent.com/you/repo/<commit>/evidence.pdf"
+              value={evidenceUrl}
+              onChange={e => setEvidenceUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-parchment mt-1">
+              Use a commit-pinned URL whose content never changes. Every GenLayer validator fetches it independently and must agree on the SHA-256 before a VERIFIED status is stored.
+            </p>
+          </div>
+
+          {evidenceUrl.trim() && (
+            <div>
+              <label style={labelStyle}>Evidence SHA-256</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  style={{ ...inputStyle, flex: 1 }}
+                  placeholder="0x… (64 hex chars)"
+                  value={evidenceSha256}
+                  onChange={e => setEvidenceSha256(e.target.value)}
+                />
+                <SealButton size="sm" variant="outline" loading={hashing} disabled={hashing} onClick={async () => {
+                  setHashing(true);
+                  setError(null);
+                  try {
+                    const res = await fetch(evidenceUrl.trim());
+                    if (!res.ok) throw new Error(`Fetch failed: HTTP ${res.status}`);
+                    const buf = await res.arrayBuffer();
+                    const digest = await crypto.subtle.digest("SHA-256", buf);
+                    setEvidenceSha256("0x" + Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join(""));
+                  } catch (e: unknown) {
+                    setError(e instanceof Error ? `Could not hash URL in browser (CORS?): ${e.message}. Compute the SHA-256 yourself and paste it.` : "Hashing failed");
+                  } finally {
+                    setHashing(false);
+                  }
+                }}>
+                  Compute Hash
+                </SealButton>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="flex gap-2 border border-redaction-rose/30 bg-redaction-rose/5 rounded-sm p-3">

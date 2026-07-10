@@ -36,6 +36,7 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [funding, setFunding] = useState(false);
   const [fundError, setFundError] = useState<string | null>(null);
+  const [verifyingUrl, setVerifyingUrl] = useState<number | null>(null);
 
   const loadPact = useCallback(async () => {
     setLoading(true);
@@ -70,6 +71,19 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
     if (!address || !pact) return;
     await veilpactWrite.acceptPact(address as `0x${string}`, numId);
     await loadPact();
+  }
+
+  async function handleVerifyEvidenceUrl(disputeId: number) {
+    if (!address) return;
+    setVerifyingUrl(disputeId);
+    try {
+      await veilpactWrite.verifyEvidenceUrl(address as `0x${string}`, numId, disputeId);
+      await loadPact();
+    } catch {
+      await loadPact();
+    } finally {
+      setVerifyingUrl(null);
+    }
   }
 
   async function handleFund() {
@@ -258,6 +272,34 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
               </div>
               <p className="text-xs text-muted-parchment">Clause #{d.clauseIndex} · Opened by {d.opener?.slice(0, 10)}…</p>
               <p className="text-sm text-parchment mt-2">{d.claim}</p>
+              {d.evidenceUrl && (
+                <div className="mt-3 border border-bone-border rounded-sm p-3">
+                  <div className="flex justify-between items-center gap-3">
+                    <div style={{ minWidth: 0 }}>
+                      <p className="text-xs text-muted-parchment font-mono uppercase tracking-widest">Evidence URL</p>
+                      <a href={d.evidenceUrl} target="_blank" rel="noopener noreferrer"
+                        className="text-xs font-mono text-parchment underline break-all">{d.evidenceUrl}</a>
+                    </div>
+                    <span style={{
+                      border: `1px solid ${d.evidenceUrlStatus === "VERIFIED" ? "rgba(110,159,126,0.4)" : d.evidenceUrlStatus === "UNVERIFIED" ? "rgba(201,163,91,0.4)" : "rgba(184,92,112,0.4)"}`,
+                      color: d.evidenceUrlStatus === "VERIFIED" ? "#6E9F7E" : d.evidenceUrlStatus === "UNVERIFIED" ? "#C9A35B" : "#B85C70",
+                    }} className="text-xs font-mono px-2 py-0.5 rounded-sm whitespace-nowrap">
+                      {d.evidenceUrlStatus}
+                    </span>
+                  </div>
+                  {d.evidenceUrlStatus === "UNVERIFIED" && address && (
+                    <div className="mt-2">
+                      <SealButton size="sm" variant="outline" loading={verifyingUrl === d.disputeId} disabled={verifyingUrl !== null}
+                        onClick={() => handleVerifyEvidenceUrl(d.disputeId)}>
+                        Verify via GenLayer validators
+                      </SealButton>
+                      <p className="text-xs text-muted-parchment mt-1 font-mono">
+                        Every validator fetches this URL independently and must agree on its SHA-256.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               {d.verdict && (
                 <div className="mt-4">
                   <VerdictStamp
