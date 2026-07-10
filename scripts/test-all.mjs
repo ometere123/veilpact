@@ -37,7 +37,9 @@ const assert = (condition, message) => { if (!condition) throw new Error(`ASSERT
 function leaderResult(tx) {
   const leader = tx?.consensus_data?.leader_receipt?.[0];
   const result = leader?.execution_result ?? leader?.genvm_result?.execution_result ?? leader?.result?.status;
-  const stderr = leader?.stderr ?? leader?.genvm_result?.stderr ?? "";
+  // gl.vm.UserError rolls back with the message in result.payload; raw tracebacks land in stderr.
+  const stderr = [leader?.result?.payload, leader?.stderr ?? leader?.genvm_result?.stderr]
+    .filter(Boolean).join("\n");
   return { result: String(result ?? "MISSING"), stderr, leader };
 }
 

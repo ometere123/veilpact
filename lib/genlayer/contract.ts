@@ -34,6 +34,7 @@ interface GenLayerReceipt {
       };
       result?: {
         status?: string;
+        payload?: string;
       };
     }>;
   };
@@ -111,10 +112,14 @@ async function waitFinalized(txHash: string): Promise<unknown> {
     ?? leader?.result?.status;
   const accepted = ['SUCCESS', 'ACCEPTED', 'success', 'accepted'].includes(String(executionResult));
   if (!accepted) {
+    // gl.vm.UserError rolls back with the message in result.payload; raw tracebacks land in stderr.
+    const payload = leader?.result?.payload;
     const stderr = leader?.genvm_result?.stderr ?? leader?.stderr;
-    const detail = typeof stderr === 'string'
-      ? stderr.split('\n').filter(Boolean).slice(-2).join('\n')
-      : `execution_result=${String(executionResult ?? 'missing')}`;
+    const detail = typeof payload === 'string' && payload.length > 0
+      ? payload
+      : typeof stderr === 'string' && stderr.length > 0
+        ? stderr.split('\n').filter(Boolean).slice(-2).join('\n')
+        : `execution_result=${String(executionResult ?? 'missing')}`;
     throw new Error(`[VeilPact] Contract write failed\n${detail}`);
   }
   console.log('[VeilPact finalized]', txHash, receipt);

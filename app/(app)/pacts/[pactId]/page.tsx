@@ -34,6 +34,8 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
   const [localPact, setLocalPact] = useState<StoredPact | null>(null);
   const [reveals, setReveals] = useState<unknown[]>([]);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+  const [funding, setFunding] = useState(false);
+  const [fundError, setFundError] = useState<string | null>(null);
 
   const loadPact = useCallback(async () => {
     setLoading(true);
@@ -70,6 +72,20 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
     await loadPact();
   }
 
+  async function handleFund() {
+    if (!address || !pact) return;
+    setFunding(true);
+    setFundError(null);
+    try {
+      await veilpactWrite.fundPact(address as `0x${string}`, numId, pact.expectedAmount ?? BigInt(0));
+      await loadPact();
+    } catch (e: unknown) {
+      setFundError(e instanceof Error ? e.message : "Funding failed");
+    } finally {
+      setFunding(false);
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: "center", fontFamily: "IBM Plex Mono, monospace", color: "rgba(239,228,208,0.4)" }}>
@@ -89,6 +105,9 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
 
   const isPartyB = address?.toLowerCase() === pact.partyB?.toLowerCase();
   const canAccept = isPartyB && pact.status === "PENDING_COUNTERPARTY";
+  const isPayer = address?.toLowerCase() === pact.payer?.toLowerCase();
+  const canFund = isPayer && pact.paymentStatus === "UNFUNDED"
+    && (pact.status === "PENDING_COUNTERPARTY" || pact.status === "ACCEPTED");
 
   const latestVerdict = disputes.find(d => d.verdict)?.verdict ?? null;
   const latestDisputeId = disputes.find(d => d.verdict)?.disputeId ?? -1;
@@ -127,6 +146,25 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
             <p style={{ fontSize: "0.78rem", color: "rgba(239,228,208,0.64)", marginTop: 2 }}>You are Party B. Accept to activate this pact.</p>
           </div>
           <SealButton variant="gold" onClick={handleAccept}>Accept Pact</SealButton>
+        </div>
+      )}
+
+      {canFund && (
+        <div style={{ border: "1px solid rgba(201,163,91,0.3)", backgroundColor: "rgba(201,163,91,0.05)", borderRadius: 2, padding: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <p style={{ fontFamily: "Bebas Neue, sans-serif", letterSpacing: "0.08em", color: "#C9A35B" }}>FUNDING REQUIRED</p>
+              <p style={{ fontSize: "0.78rem", color: "rgba(239,228,208,0.64)", marginTop: 2 }}>
+                You are the payer. Fund {formatGEN(pact.expectedAmount)} GEN to lock the settlement escrow.
+              </p>
+            </div>
+            <SealButton variant="gold" loading={funding} disabled={funding} onClick={handleFund}>
+              Fund Pact ({formatGEN(pact.expectedAmount)} GEN)
+            </SealButton>
+          </div>
+          {fundError && (
+            <p style={{ fontSize: "0.72rem", color: "#B85C70", fontFamily: "IBM Plex Mono, monospace", marginTop: 8 }}>{fundError}</p>
+          )}
         </div>
       )}
 

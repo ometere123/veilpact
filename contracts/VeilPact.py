@@ -216,7 +216,7 @@ class VeilPact(gl.Contract):
 
     def _require(self, condition: bool, msg: str) -> None:
         if not condition:
-            raise Exception(msg)
+            raise gl.vm.UserError(msg)
 
     def _caller(self) -> str:
         return str(gl.message.sender_address).lower()
@@ -495,7 +495,7 @@ class VeilPact(gl.Contract):
             elif pact.close_proposed_target == pact.payee:
                 pact = self._set_claimables_from_bps(pact, u256(0), u256(BPS_DENOMINATOR), PAYMENT_STATUS_CLAIMABLE)
             else:
-                raise Exception("invalid close target")
+                raise gl.vm.UserError("invalid close target")
         pact.status = PACT_STATUS_RESOLVED_SETTLE
         pact.close_proposal_active = False
         pact.close_proposed_by = self._empty_addr()
@@ -549,7 +549,7 @@ class VeilPact(gl.Contract):
         try:
             json.loads(response_json)
         except Exception:
-            raise Exception("responseJson must be valid JSON")
+            raise gl.vm.UserError("responseJson must be valid JSON")
         dispute.response_json = response_json
         self.disputes[d_key] = dispute
         if dispute.revealed and dispute.status in [DISPUTE_STATUS_REVEALED, DISPUTE_STATUS_RESOLVED]:
@@ -574,7 +574,7 @@ class VeilPact(gl.Contract):
         try:
             payload = json.loads(clause_payload_json)
         except Exception:
-            raise Exception("clausePayloadJson must be valid JSON")
+            raise gl.vm.UserError("clausePayloadJson must be valid JSON")
         self._require(str(payload.get("version", "")) == CLAUSE_VERSION, "Invalid clause payload version")
         self._require(str(payload.get("network", "")) == NETWORK_ID, "Invalid network in clause payload")
         self._require(str(payload.get("partyA", "")).lower() == str(pact.party_a).lower(), "partyA mismatch")
@@ -597,7 +597,7 @@ class VeilPact(gl.Contract):
         try:
             evidence_data = json.loads(evidence_bundle_json)
         except Exception:
-            raise Exception("evidenceBundleJson must be valid JSON")
+            raise gl.vm.UserError("evidenceBundleJson must be valid JSON")
         self._require(len(str(evidence_data.get("claim", ""))) > 0, "Evidence bundle missing claim")
         evidence_requested = str(evidence_data.get("requestedOutcome", dispute.requested_outcome))
         self._require(evidence_requested in ALLOWED_REQUESTED_OUTCOMES, "Evidence bundle requestedOutcome invalid")
@@ -703,11 +703,7 @@ If paymentDecision is REFUND_TO_PAYER, payerRefundBps=10000 and payeeReleaseBps=
 If paymentDecision is SPLIT_PAYMENT, payerRefundBps + payeeReleaseBps must equal 10000.
 If safetyLabel is REJECTED_UNSAFE, paymentDecision should be REFUND_TO_PAYER.
 """
-        try:
-            raw = gl.eq_principle.prompt_non_comparative(review_context, task=task, criteria=criteria)
-        except Exception:
-            with gl.nondet:
-                raw = gl.exec_prompt(review_context() + "\n\n" + task + "\n\n" + criteria)
+        raw = gl.eq_principle.prompt_non_comparative(review_context, task=task, criteria=criteria)
         verdict = self._parse_verdict(raw, dispute, pact)
         dispute.verdict = verdict
         dispute.review_count = dispute.review_count + u256(1)
@@ -840,7 +836,7 @@ If safetyLabel is REJECTED_UNSAFE, paymentDecision should be REFUND_TO_PAYER.
         if verdict.safety_label == "REJECTED_UNSAFE" or verdict.recommended_action == "REJECTED_UNSAFE":
             pact = self._set_claimables_from_bps(pact, u256(BPS_DENOMINATOR), u256(0), PAYMENT_STATUS_CLAIMABLE)
         elif decision == "NO_PAYMENT_ACTION":
-            raise Exception("Verdict has no payment action")
+            raise gl.vm.UserError("Verdict has no payment action")
         elif decision == "PAUSE_PAYMENT":
             pact.payment_status = PAYMENT_STATUS_PAUSED
             pact.status = PACT_STATUS_RESOLVED_PAUSE
@@ -853,7 +849,7 @@ If safetyLabel is REJECTED_UNSAFE, paymentDecision should be REFUND_TO_PAYER.
         elif decision == "SPLIT_PAYMENT":
             pact = self._set_claimables_from_bps(pact, verdict.payer_refund_bps, verdict.payee_release_bps, PAYMENT_STATUS_CLAIMABLE)
         else:
-            raise Exception("Unsupported payment decision")
+            raise gl.vm.UserError("Unsupported payment decision")
         pact.status = PACT_STATUS_RESOLVED_SETTLE
         self.pacts[pact_id] = pact
 
