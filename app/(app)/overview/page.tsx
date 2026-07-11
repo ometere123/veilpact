@@ -67,7 +67,10 @@ export default function OverviewPage() {
     .filter(p => p.chain?.paymentStatus === "LOCKED")
     .reduce((s, p) => s + (p.chain?.fundedAmount ?? BigInt(0)), BigInt(0));
   const claimable = chainPacts.reduce(
-    (s, p) => s + (p.chain?.payerClaimable ?? BigInt(0)) + (p.chain?.payeeClaimable ?? BigInt(0)),
+    (s, p) =>
+      s
+      + (p.chain?.payerClaimed ? BigInt(0) : p.chain?.payerClaimable ?? BigInt(0))
+      + (p.chain?.payeeClaimed ? BigInt(0) : p.chain?.payeeClaimable ?? BigInt(0)),
     BigInt(0),
   );
   const settlements = chainPacts.filter(p => p.chain?.settlementApplied).length;

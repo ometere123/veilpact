@@ -1173,6 +1173,8 @@ If safetyLabel is REJECTED_UNSAFE, paymentDecision should be REFUND_TO_PAYER.
                         "payer": str(p.payer), "payee": str(p.payee), "expectedAmount": int(p.expected_amount),
                         "fundedAmount": int(p.funded_amount), "paymentStatus": p.payment_status,
                         "payerClaimable": int(p.payer_claimable), "payeeClaimable": int(p.payee_claimable),
+                        "payerClaimed": p.payer_claimed, "payeeClaimed": p.payee_claimed,
+                        "settlementApplied": p.settlement_applied,
                     })
         return result
 

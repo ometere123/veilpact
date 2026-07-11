@@ -136,7 +136,7 @@ Use commit-pinned URLs (raw GitHub with a commit hash, not a branch name) so the
 | Chain ID | 61999 |
 | RPC | https://studio.genlayer.com/api |
 | Explorer | https://explorer-studio.genlayer.com |
-| Contract | `0x1C54a2CC9E5662475Dcab828e291182228Bc2A24` |
+| Contract | `0x093B04671cc13daA80ddD6190275b18c7718132f` |
 | Source | `contracts/VeilPact.py` |
 
 Key methods:
