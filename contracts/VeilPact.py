@@ -1212,7 +1212,14 @@ If safetyLabel is REJECTED_UNSAFE, paymentDecision should be REFUND_TO_PAYER.
                     funded_pacts += 1
                 if pact.payment_status == PAYMENT_STATUS_LOCKED:
                     locked_amount += int(pact.funded_amount)
-                claimable_amount += int(pact.payer_claimable) + int(pact.payee_claimable)
+                # payer_claimable/payee_claimable are never zeroed after a
+                # claim (only the *_claimed flags flip), so exclude already-
+                # claimed shares - this must be currently-outstanding GEN,
+                # not a historical cumulative total.
+                if not pact.payer_claimed:
+                    claimable_amount += int(pact.payer_claimable)
+                if not pact.payee_claimed:
+                    claimable_amount += int(pact.payee_claimable)
                 total_disputes += int(pact.dispute_count)
                 total_revealed += int(pact.revealed_count)
         for i in range(1, int(self.privacy_entry_count) + 1):
