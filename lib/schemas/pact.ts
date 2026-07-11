@@ -104,6 +104,7 @@ export interface DisputeOnChain {
   evidenceUrl?:        string;
   evidenceUrlSha256?:  string;
   evidenceUrlStatus?:  string;
+  evidenceContentExcerpt?: string;
   verdict:          VerdictData | null;
 }
 

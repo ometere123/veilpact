@@ -294,8 +294,19 @@ export default function PactDetailPage({ params }: { params: Promise<{ pactId: s
                         Verify via GenLayer validators
                       </SealButton>
                       <p className="text-xs text-muted-parchment mt-1 font-mono">
-                        Every validator fetches this URL independently and must agree on its SHA-256.
+                        Every validator fetches this URL independently and must agree on its SHA-256 and its content before it can be read by the reviewer.
                       </p>
+                    </div>
+                  )}
+                  {d.evidenceUrlStatus === "VERIFIED" && d.evidenceContentExcerpt && (
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-parchment font-mono uppercase tracking-widest mb-1">
+                        Validator-verified content (read by the GenLayer reviewer)
+                      </p>
+                      <pre className="text-xs font-mono text-parchment/80 whitespace-pre-wrap break-all"
+                        style={{ maxHeight: 180, overflowY: "auto", background: "#0B0B10", padding: 8, borderRadius: 2 }}>
+                        {d.evidenceContentExcerpt}
+                      </pre>
                     </div>
                   )}
                 </div>

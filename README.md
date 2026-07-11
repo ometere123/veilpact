@@ -19,7 +19,7 @@ Connect your wallet and create a pact with a counterparty: each clause is hashed
 - **Selective reveal** - a dispute exposes only the single disputed clause, never the whole agreement
 - **Commit-verified reveals** - a revealed clause must re-hash to the exact stored commitment and re-derive the agreement root, so nobody can swap terms after signing
 - **AI consensus arbitration** - a custom leader/validator pattern (`gl.vm.run_nondet_unsafe`): every validator independently re-runs the review and must agree on the recommended action, the safety label, and the economic outcome (payee share within 20% of escrow) before a verdict is stored - a single malicious leader cannot steer the settlement
-- **On-chain evidence verification** - a disputing party can attach a public evidence URL and its SHA-256; validators independently fetch the URL with `gl.nondet.web.get` and reach strict-equality consensus on the digest, so a `VERIFIED` status is validator consensus, not a self-report
+- **On-chain evidence verification, read by the reviewer** - a disputing party can attach a public evidence URL and its SHA-256; validators independently fetch the URL with `gl.nondet.web.get` and reach strict-equality consensus on both the digest and a text excerpt of the content, so a `VERIFIED` status is validator consensus on integrity - and the exact verified content is then handed to the AI dispute reviewer to actually read and reason over, not just cite as "linked"
 - **Optional GEN escrow** - fund at creation or any time before activation; verdicts settle in basis points via pull-payment claims
 - **Privacy ledger** - every reveal is recorded on-chain with an over-disclosure warning flag, so disclosure itself is auditable
 
@@ -111,16 +111,18 @@ The review runs through a custom leader/validator consensus built on `gl.vm.run_
 
 ## Evidence verification
 
-When revealing a clause for a dispute, a party can optionally attach a public evidence URL and its SHA-256 hash in the evidence bundle (`evidenceUrl`, `evidenceSha256`). Any party can then call **`verify_evidence_url`**: every GenLayer validator independently fetches the URL with `gl.nondet.web.get` and hashes the raw response body, and `gl.eq_principle.strict_eq` requires every validator to agree on the digest before a status is written to state.
+When revealing a clause for a dispute, a party can optionally attach a public evidence URL and its SHA-256 hash in the evidence bundle (`evidenceUrl`, `evidenceSha256`). Any party can then call **`verify_evidence_url`**: every GenLayer validator independently fetches the URL with `gl.nondet.web.get`, then computes both the SHA-256 of the raw response body and a bounded text excerpt of it. `gl.eq_principle.strict_eq` packs both into one canonical value and requires every validator to agree on it exactly before anything is written to state - so the excerpt that ends up on-chain is content every validator independently confirmed, not a self-reported summary.
 
 Outcomes stored on-chain:
 
 | Status | Meaning |
 | --- | --- |
 | `UNVERIFIED` | An evidence URL was submitted but verification has not run yet |
-| `VERIFIED` | Validators fetched the URL and the SHA-256 matches the claimed hash |
-| `HASH_MISMATCH` | Validators fetched successfully but the hash does not match |
-| `FAILED_FETCH` | The URL was unreachable |
+| `VERIFIED` | Validators fetched the URL, the SHA-256 matches the claimed hash, and the verified excerpt is stored |
+| `HASH_MISMATCH` | Validators fetched successfully but the hash does not match the claim |
+| `FAILED_FETCH` | The URL could not be fetched at all |
+
+Integrity and comprehension are separate guarantees, and only `VERIFIED` gets both: the `verifiedContentExcerpt` is fed directly into the dispute reviewer's context, so the AI arbitrator actually reads the authenticated document text when judging evidence strength and breach likelihood - it isn't just told a link "checked out." Anything other than `VERIFIED` is explicitly excluded from the reviewer's reasoning.
 
 Use commit-pinned URLs (raw GitHub with a commit hash, not a branch name) so the content is byte-identical across every validator's independent fetch.
 
@@ -134,7 +136,7 @@ Use commit-pinned URLs (raw GitHub with a commit hash, not a branch name) so the
 | Chain ID | 61999 |
 | RPC | https://studio.genlayer.com/api |
 | Explorer | https://explorer-studio.genlayer.com |
-| Contract | `0x9204f36BBf281C2B2B8DC986d7266CD4c10999a8` |
+| Contract | `0x47751200FB0559764Fc3128f6DE7c07B701E197c` |
 | Source | `contracts/VeilPact.py` |
 
 Key methods:

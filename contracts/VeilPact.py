@@ -35,6 +35,7 @@ MAX_CLAIM_LEN = 1200
 MAX_RESPONSE_LEN = 5000
 MAX_CLAUSE_PAYLOAD_LEN = 8000
 MAX_EVIDENCE_BUNDLE_LEN = 9000
+MAX_EVIDENCE_EXCERPT_LEN = 4000
 MAX_ROOT_SALT_LEN = 130
 MAX_REASONING_LEN = 1000
 BPS_DENOMINATOR = 10000
@@ -168,6 +169,7 @@ class Dispute:
     evidence_url: str
     evidence_url_sha256: str
     evidence_url_status: str
+    evidence_content_excerpt: str
     revealed: bool
     review_count: u256
     verdict: Verdict
@@ -536,7 +538,7 @@ class VeilPact(gl.Contract):
             pact.close_proposed_by = self._empty_addr()
             pact.close_proposed_target = self._empty_addr()
         dispute_id = pact.dispute_count + u256(1)
-        dispute = Dispute(dispute_id, pact_id, gl.message.sender_address, clause_index, claim, requested_outcome, "", DISPUTE_STATUS_OPEN, "", "", "", "", "", EVIDENCE_URL_NONE, False, u256(0), self._empty_verdict())
+        dispute = Dispute(dispute_id, pact_id, gl.message.sender_address, clause_index, claim, requested_outcome, "", DISPUTE_STATUS_OPEN, "", "", "", "", "", EVIDENCE_URL_NONE, "", False, u256(0), self._empty_verdict())
         self.disputes[self._dispute_key(pact_id, dispute_id)] = dispute
         pact.dispute_count = dispute_id
         pact.status = PACT_STATUS_DISPUTED
@@ -654,24 +656,40 @@ class VeilPact(gl.Contract):
         url = dispute.evidence_url
         claimed_hash = dispute.evidence_url_sha256
 
-        # Every validator fetches the URL independently and hashes the raw
-        # response body; strict_eq requires all nodes to agree on the digest
-        # before anything is stored. A VERIFIED status is validator consensus,
-        # not a self-report.
+        # Every validator fetches the URL independently, hashes the raw
+        # response body, and decodes a bounded text excerpt from it.
+        # strict_eq requires every validator to agree on BOTH the hash and
+        # the excerpt (packed into one canonical JSON string) before anything
+        # is stored - so the text later handed to the dispute reviewer is the
+        # exact content every validator independently confirmed, not a
+        # self-reported summary. A VERIFIED status is validator consensus on
+        # integrity; the excerpt is validator consensus on content.
         def fetch_and_hash() -> str:
             try:
                 body = gl.nondet.web.get(url).body
             except Exception:
-                return "FETCH_ERROR"
-            return "0x" + hashlib.sha256(body).hexdigest()
+                return self._canonical_json_from_obj({"kind": "error"})
+            digest = "0x" + hashlib.sha256(body).hexdigest()
+            try:
+                excerpt = body.decode("utf-8", errors="replace")[:MAX_EVIDENCE_EXCERPT_LEN]
+            except Exception:
+                excerpt = ""
+            return self._canonical_json_from_obj({"kind": "ok", "hash": digest, "excerpt": excerpt})
 
         outcome = gl.eq_principle.strict_eq(fetch_and_hash)
-        if outcome == "FETCH_ERROR":
+        try:
+            data = json.loads(outcome)
+        except Exception:
+            data = {"kind": "error"}
+        if data.get("kind") != "ok":
             dispute.evidence_url_status = EVIDENCE_URL_FAILED_FETCH
-        elif outcome.lower() == claimed_hash:
+            dispute.evidence_content_excerpt = ""
+        elif str(data.get("hash", "")).lower() == claimed_hash:
             dispute.evidence_url_status = EVIDENCE_URL_VERIFIED
+            dispute.evidence_content_excerpt = self._shorten(str(data.get("excerpt", "")), MAX_EVIDENCE_EXCERPT_LEN)
         else:
             dispute.evidence_url_status = EVIDENCE_URL_HASH_MISMATCH
+            dispute.evidence_content_excerpt = ""
         self.disputes[d_key] = dispute
         return dispute.evidence_url_status
 
@@ -709,7 +727,8 @@ class VeilPact(gl.Contract):
             "evidenceUrlVerification": {
                 "evidenceUrl": dispute.evidence_url,
                 "status": dispute.evidence_url_status,
-                "note": "VERIFIED means every validator independently fetched this URL and the SHA-256 of the response body matched the claimed hash. UNVERIFIED means verification has not run. Treat HASH_MISMATCH as evidence tampering.",
+                "verifiedContentExcerpt": dispute.evidence_content_excerpt if dispute.evidence_url_status == EVIDENCE_URL_VERIFIED else "",
+                "note": "VERIFIED means every validator independently fetched this URL and agreed on both the SHA-256 of the response body and the verifiedContentExcerpt text - you may reason over verifiedContentExcerpt as authenticated fact. UNVERIFIED means verification has not run yet; do not assume any content. Treat HASH_MISMATCH or FAILED_FETCH as this evidence link being untrustworthy - do not use it to support either party's claim.",
             },
             "payment": {
                 "hasFundedSettlement": int(pact.funded_amount) > 0,
@@ -754,6 +773,10 @@ The output must be valid JSON with no markdown and no extra text.
 All enum values must be from the allowed lists.
 clauseVerified must be true because deterministic commitment verification already passed.
 Do not rely on unrevealed clauses. Do not make legal enforceability claims.
+If evidenceUrlVerification.status is VERIFIED, treat verifiedContentExcerpt as authenticated
+fact and reason over its actual content when judging evidenceStrength and breachLikelihood.
+If status is UNVERIFIED, HASH_MISMATCH, or FAILED_FETCH, do not assume any content from that
+link and do not let it raise evidenceStrength above WEAK on its own.
 If paymentDecision is RELEASE_TO_PAYEE, payerRefundBps=0 and payeeReleaseBps=10000.
 If paymentDecision is REFUND_TO_PAYER, payerRefundBps=10000 and payeeReleaseBps=0.
 If paymentDecision is SPLIT_PAYMENT, payerRefundBps + payeeReleaseBps must equal 10000.
@@ -1110,6 +1133,7 @@ If safetyLabel is REJECTED_UNSAFE, paymentDecision should be REFUND_TO_PAYER.
             "clauseIndex": int(d.clause_index), "claim": d.claim, "requestedOutcome": d.requested_outcome,
             "evidenceSummary": d.evidence_summary, "status": d.status, "hasResponse": bool(d.response_json),
             "evidenceUrl": d.evidence_url, "evidenceUrlSha256": d.evidence_url_sha256, "evidenceUrlStatus": d.evidence_url_status,
+            "evidenceContentExcerpt": d.evidence_content_excerpt,
             "revealed": d.revealed, "reviewCount": int(d.review_count), "verdict": verdict,
         }
 
