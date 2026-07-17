@@ -18,7 +18,7 @@ Connect your wallet and create a pact with a counterparty: each clause is hashed
 - **Clause-level privacy** - agreements are committed as per-clause SHA-256 hashes; clause text never goes on-chain until a dispute requires it
 - **Selective reveal** - a dispute exposes only the single disputed clause, never the whole agreement
 - **Commit-verified reveals** - a revealed clause must re-hash to the exact stored commitment and re-derive the agreement root, so nobody can swap terms after signing
-- **AI consensus arbitration** - a custom leader/validator pattern (`gl.vm.run_nondet_unsafe`): every validator independently re-runs the review and must agree on the recommended action, the safety label, and the economic outcome (payee share within 20% of escrow) before a verdict is stored - a single malicious leader cannot steer the settlement
+- **AI consensus arbitration** - a custom leader/validator pattern (`gl.vm.run_nondet_unsafe`): every validator independently re-runs the review through the *same deterministic parser* used to persist the verdict, and must agree exactly on the recommended action, payment decision, and safety label, with the settlement split held to a 5% tolerance - a single malicious leader cannot steer the settlement
 - **On-chain evidence verification, read by the reviewer** - a disputing party can attach a public evidence URL and its SHA-256; validators independently fetch the URL with `gl.nondet.web.get` and reach strict-equality consensus on both the digest and a text excerpt of the content, so a `VERIFIED` status is validator consensus on integrity - and the exact verified content is then handed to the AI dispute reviewer to actually read and reason over, not just cite as "linked"
 - **Optional GEN escrow** - fund at creation or any time before activation; verdicts settle in basis points via pull-payment claims
 - **Privacy ledger** - every reveal is recorded on-chain with an over-disclosure warning flag, so disclosure itself is auditable
@@ -39,7 +39,7 @@ Connect your wallet and create a pact with a counterparty: each clause is hashed
 
 - The payer can fund during the creation wizard, or later from the pact detail page - a *Fund Pact* banner appears whenever the pact is still unfunded and fundable
 - `fund_pact` is payable and requires the exact expected amount; once the counterparty accepts, the escrow is `LOCKED`
-- From `LOCKED`, funds move only through payer release, mutual close, an applied dispute verdict, or a resolver settlement - always into claimable balances (pull payments), never direct pushes
+- From `LOCKED`, funds move only through payer release, mutual close, an applied dispute verdict, or a resolver settlement (a constrained last-resort fallback, only usable after an AI review has run and left payment genuinely undecided) - always into claimable balances (pull payments), never direct pushes
 
 **Disputing**
 
@@ -105,7 +105,9 @@ Payment status runs in parallel: `UNFUNDED -> FUNDED -> LOCKED -> CLAIMABLE -> C
 | `respond_to_dispute(...)` | Stores the counterparty response; re-runs consensus review if the clause is already revealed |
 | `apply_settlement_decision(...)` | Converts the consensus verdict's basis points into claimable escrow balances |
 
-The review runs through a custom leader/validator consensus built on `gl.vm.run_nondet_unsafe`. The leader's LLM proposes the verdict JSON; each validator independently re-runs the identical prompt and compares the decision fields deterministically - the unsafe flag must match exactly, the recommended action must fall in the same outcome group (settle / no-breach / revisit), and the implied payee share of the escrow must agree within 2,000 basis points. Formatting-only validation of the leader's output is not consensus; here a biased leader gets voted down and the network rotates leaders. The accepted verdict is then re-validated inside the contract - enums are whitelisted, basis points clamped and forced consistent with the payment decision, weak-evidence settlements downgraded, and a deterministic prohibited-content screen can override the outcome to `REJECTED_UNSAFE` with a full refund. All contract errors raise `gl.vm.UserError` for clean on-chain surfacing.
+The review runs through a custom leader/validator consensus built on `gl.vm.run_nondet_unsafe`. The leader's LLM proposes a verdict; every validator independently re-runs the identical prompt and normalizes its own answer through the exact same deterministic parser used to persist the verdict - i.e. validators agree on the **final parsed state**, not a loose approximation of it. `recommendedAction`, `paymentDecision`, and `safetyLabel` must match exactly; the settlement split is held to a 500 bps (5%) tolerance. Formatting-only validation of the leader's output is not consensus; here a biased leader gets voted down and the network rotates leaders. The accepted verdict is then re-validated inside the contract - enums are whitelisted, basis points clamped and forced consistent with the payment decision, weak-evidence settlements downgraded, and a deterministic prohibited-content screen can override the outcome to `REJECTED_UNSAFE` with a full refund. All contract errors raise `gl.vm.UserError` for clean on-chain surfacing.
+
+The dispute reviewer is always anchored to the **original, immutable claim** recorded at `open_dispute` - the reveal-time evidence bundle's own restatement of the claim is exposed to the reviewer only as non-authoritative context and can never override it. If a dispute cites an evidence URL, its verdict is tagged with the evidence-verification state it was actually computed under; `apply_settlement_decision` (and `resolver_settle`) refuse to move funds on a verdict that was produced before that URL was `VERIFIED`, even if the URL gets verified afterward - a fresh review must run first. `resolver_settle` itself is a constrained last-resort fallback, not a parallel route around AI review: it can only be called after a real review has completed, and only when that review's own verdict left payment genuinely undecided (`PAUSE_PAYMENT` or `NO_PAYMENT_ACTION`) - it cannot override a decisive AI verdict.
 
 ---
 
@@ -136,7 +138,7 @@ Use commit-pinned URLs (raw GitHub with a commit hash, not a branch name) so the
 | Chain ID | 61999 |
 | RPC | https://studio.genlayer.com/api |
 | Explorer | https://explorer-studio.genlayer.com |
-| Contract | `0x093B04671cc13daA80ddD6190275b18c7718132f` |
+| Contract | `0x2f5Cb5f455cDEF77e7054B9D61D6784d79A8b0Ee` |
 | Source | `contracts/VeilPact.py` |
 
 Key methods:
