@@ -300,4 +300,18 @@ export const veilpactWrite = {
     await waitFinalized(txHash);
     return txHash;
   },
+
+  // Admin-only. Changes who can call resolver_settle.
+  setResolver: async (walletAddress: `0x${string}`, resolver: string) => {
+    const txHash = await write(walletAddress, 'set_resolver', [resolver]);
+    await waitFinalized(txHash);
+    return txHash;
+  },
+
+  // Admin-only. Changes who can call admin-gated methods, including this one.
+  setAdmin: async (walletAddress: `0x${string}`, newAdmin: string) => {
+    const txHash = await write(walletAddress, 'set_admin', [newAdmin]);
+    await waitFinalized(txHash);
+    return txHash;
+  },
 };

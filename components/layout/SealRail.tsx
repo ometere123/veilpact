@@ -1,12 +1,15 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useWalletContext } from "@/contexts/WalletContext";
+import { veilpactRead } from "@/lib/genlayer/contract";
 import {
   LayoutDashboard, FilePlus2, FolderKanban, Fingerprint,
-  Swords, Package, ScanEye, FlaskConical, BookLock, Settings,
+  Swords, Package, ScanEye, FlaskConical, BookLock, Settings, ShieldCheck,
 } from "lucide-react";
 
 const NAV = [
@@ -24,6 +27,19 @@ const NAV = [
 
 export function SealRail() {
   const path = usePathname();
+  const { address, connected } = useWalletContext();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!connected || !address) { setIsAdmin(false); return; }
+    let cancelled = false;
+    void veilpactRead.getAdmin().then(admin => {
+      if (!cancelled) setIsAdmin(String(admin).toLowerCase() === address.toLowerCase());
+    }).catch(() => { if (!cancelled) setIsAdmin(false); });
+    return () => { cancelled = true; };
+  }, [address, connected]);
+
+  const items = isAdmin ? [...NAV, { href: "/admin", label: "Admin", icon: ShieldCheck }] : NAV;
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-56 bg-obsidian border-r border-bone-border flex flex-col z-40">
@@ -35,7 +51,7 @@ export function SealRail() {
 
       {/* Nav */}
       <nav className="flex-1 py-4 overflow-y-auto">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = path === href || path.startsWith(href + "/");
           return (
             <Link
