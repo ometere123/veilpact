@@ -155,8 +155,9 @@ Key methods:
 | `reveal_clause_for_dispute` | Commit-verified selective reveal; triggers consensus review |
 | `verify_evidence_url` | Validators independently fetch and hash the dispute's evidence URL |
 | `apply_settlement_decision` | Apply the AI verdict to the escrow |
-| `resolver_settle` | Resolver fallback settlement for stuck escrows |
+| `resolver_settle` | Resolver fallback settlement, constrained to disputes an AI review has already left undecided |
 | `claim_payer_refund` / `claim_payee_payment` | Pull-payment withdrawals |
+| `set_resolver` / `set_admin` | Admin-only; change who holds the resolver/admin role |
 | `get_pact` / `get_dispute` / `get_reveals` / `get_privacy_ledger` / `get_protocol_stats` | Transparency views |
 
 ---
@@ -192,6 +193,7 @@ app/
     privacy-ledger/    On-chain disclosure audit trail
     counterparty-review/  Private package import + counterparty acceptance
     settings/          Wallet + network settings
+    admin/             Admin/resolver role management - not linked in the sidebar, admin-gated in page
 
 components/           UI components (pact wizard, payment, dispute, verdict, privacy)
 lib/genlayer/         Contract read/write wrappers over genlayer-js
