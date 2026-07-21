@@ -71,6 +71,9 @@ function PactCard({ item, address }: { item: SyncedPact; address: string }) {
             This pact exists on GenLayer, but the encrypted local package is not available in this browser.
             Import your .veilpact backup or reopen the original share link to enable selective reveal.
           </p>
+          <Link href="/settings" style={{ marginLeft: "auto", flexShrink: 0, textDecoration: "none" }}>
+            <SealButton size="sm" variant="ghost">Restore</SealButton>
+          </Link>
         </div>
       )}
 

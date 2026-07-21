@@ -169,8 +169,22 @@ Key methods:
 | Intelligent contract | GenLayer Python (py-genlayer v0.2.18) - `gl.vm.run_nondet_unsafe` custom validator, `gl.nondet.web.get` + `gl.eq_principle.strict_eq` evidence verification, `@gl.public.write.payable`, `gl.vm.UserError` |
 | Frontend | Next.js 16 App Router · React 19 · TypeScript · Tailwind CSS 4 |
 | Web3 | GenLayer JS SDK (`genlayer-js` 1.1.8) · Viem |
-| Private clause storage | Browser IndexedDB (`idb`) - clause text never leaves the client until a reveal |
+| Private clause storage | Browser IndexedDB (`idb`) - clause text never leaves the client until a reveal; `.veilpact` backups can export/import the encrypted local package and recovery key |
 | Validation | Zod schemas on every contract read |
+
+### Client-side recovery
+
+VeilPact's privacy model deliberately keeps full clause text out of the contract and out of the platform database. The tradeoff is that users must be able to recover their local encrypted clause package if browser storage is cleared or they switch devices.
+
+The app now includes a Settings recovery console for the IndexedDB clause store:
+
+- Creation and counterparty acceptance both produce a `.veilpact` recovery file.
+- The Settings page lists every local package, shows whether it is recoverable, and tracks the latest backup timestamp.
+- Users can re-download a backup for any package whose unlock key is still available in this browser.
+- Users can import a `.veilpact` backup to restore the encrypted package into IndexedDB, merging it with any existing local or on-chain cache.
+- Chain-only pacts detected from GenLayer link directly to Settings so the user can restore the missing private package before attempting selective reveal.
+
+The `.veilpact` file contains the encrypted pact package, pact metadata, commitments, root data, and the recovery key needed to decrypt the local package. It is user-controlled private data; losing it can make unrevealed clauses unrecoverable from this device, while sharing it gives the recipient access to the pact text.
 
 ---
 
@@ -192,7 +206,7 @@ app/
     review/            GenLayer review viewer
     privacy-ledger/    On-chain disclosure audit trail
     counterparty-review/  Private package import + counterparty acceptance
-    settings/          Wallet + network settings
+    settings/          IndexedDB backup/export/import recovery console
     admin/             Admin/resolver role management - not linked in the sidebar, admin-gated in page
 
 components/           UI components (pact wizard, payment, dispute, verdict, privacy)

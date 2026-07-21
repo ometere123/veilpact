@@ -16,6 +16,9 @@ export interface StoredPact {
   onChainId:         number | null;
   createdAt:         number;
   downloaded:        boolean;
+  lastBackedUpAt?:   number;
+  backupVersion?:    string;
+  importedAt?:       number;
   rootSalt:          string;
   clauseCommitments: string[];
   payment:           PaymentSetup | null;
@@ -93,7 +96,29 @@ export async function updatePactBackupStatus(id: string, downloaded = true): Pro
   const pact = await db.get("pacts", id) as StoredPact | undefined;
   if (!pact) return;
   pact.downloaded = downloaded;
+  pact.lastBackedUpAt = downloaded ? Date.now() : undefined;
+  pact.backupVersion = downloaded ? "1.0" : pact.backupVersion;
   await db.put("pacts", pact);
+}
+
+export async function importStoredPact(pact: StoredPact): Promise<StoredPact> {
+  const db = await getDB();
+  const now = Date.now();
+  const existing = pact.onChainId !== null && pact.onChainId !== undefined
+    ? await getPactByOnChainId(pact.onChainId)
+    : await getPactByAgreementRoot(pact.agreementRoot);
+  const stored: StoredPact = {
+    ...existing,
+    ...pact,
+    id: existing?.id ?? pact.id,
+    downloaded: true,
+    lastBackedUpAt: pact.lastBackedUpAt ?? now,
+    backupVersion: pact.backupVersion ?? "1.0",
+    importedAt: now,
+    source: pact.source ?? "imported",
+  };
+  await db.put("pacts", stored);
+  return stored;
 }
 
 export async function updatePactChainCache(id: string, chainPact: PactOnChain): Promise<void> {

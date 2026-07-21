@@ -65,7 +65,9 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   const isAdmin = connected && address && admin && address.toLowerCase() === admin.toLowerCase();
