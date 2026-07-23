@@ -256,3 +256,21 @@ Covers the unfunded and funded happy paths, mutual close, input/lifecycle revert
 Prohibited content (illegal, coercive, exploitative agreements) is screened twice: a deterministic keyword filter at reveal time and the validator LLM safety label. Unsafe pacts are refused enforcement and the escrow is returned to the payer.
 
 VeilPact provides decentralised private-agreement arbitration. It is not legal advice, and verdicts are advisory recommendations unless adopted by the parties.
+
+---
+
+## Milestone comparison
+
+This repository's client-side recovery milestone addresses the GenLayer team suggestion to add backup options for the local IndexedDB clause store. It does not change the deployed `contracts/VeilPact.py` agreement, consensus, evidence-verification, reveal, or settlement logic.
+
+The non-overlapping milestone diff starts from the last reviewed head before the backup work:
+
+`e781e5f2a3e3bacb1f7e5e1997698d5d03db2a8d` - Document set_resolver/set_admin and the admin page in README
+
+It ends at:
+
+`eaa902d2508ee2b42518192af9f89469b293b026` - Add client-side backup recovery
+
+Immutable GitHub comparison:
+
+https://github.com/ometere123/veilpact/compare/e781e5f2a3e3bacb1f7e5e1997698d5d03db2a8d...eaa902d2508ee2b42518192af9f89469b293b026
